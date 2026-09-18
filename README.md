@@ -2,38 +2,48 @@
 
 Lademeter- und Ladungsplanung direkt im Browser.
 
-Teil der persoenlichen Ideenschmiede auf [christianaust.eu](https://christianaust.eu).
-Geplante Adresse: `ldm.christianaust.eu`.
+Teil der persönlichen Ideenschmiede auf [christianaust.eu](https://christianaust.eu).
 
-## Status
+## Was es tut
 
-**Geruest.** Struktur und Architektur stehen, die Implementierung wartet auf die
-Referenzfassung der bestehenden Rechenlogik — siehe [docs/REFERENZ-BENOETIGT.md](docs/REFERENZ-BENOETIGT.md).
+Ladungsträger erfassen oder importieren, Sendung zusammenstellen, Ladeplan rechnen:
+Lademeter, Stellplätze, Stapelung, Verteilung auf mehrere Fahrzeuge, Auslastung,
+Restkapazität und Gewicht — mit Draufsicht, Seitenansicht, Stapelfaktorvergleich
+und nachvollziehbarem Rechenweg.
 
-## Idee
-
-Ladungstraeger erfassen oder importieren, Sendung zusammenstellen, Ladeplan rechnen:
-Lademeter, Stellplaetze, Stapelung, Verteilung auf mehrere Fahrzeuge, Auslastung und
-Restkapazitaet — mit Draufsicht, Seitenansicht und nachvollziehbarem Rechenweg.
-
-Entstanden aus einem realen Problem in der Supply-Chain-Praxis und fuer die
+Entstanden aus einem realen Problem in der Supply-Chain-Praxis und für die
 allgemeine Nutzung weiterentwickelt.
 
 ## Deine Daten bleiben in deinem Browser
 
 Alle Planungs- und Stammdaten werden lokal im Browser verarbeitet und gespeichert.
-Keine Uebertragung an einen Server, keine Analytics. Siehe [docs/DATENSCHUTZ.md](docs/DATENSCHUTZ.md).
+Keine Übertragung an einen Server, keine Analytics, keine Laufzeitabhängigkeiten.
+Siehe [docs/DATENSCHUTZ.md](docs/DATENSCHUTZ.md).
+
+## Ablauf
+
+1. **Stammdaten** — manuell anlegen, CSV oder JSON importieren oder neutrale
+   Beispieldaten laden. Export und vollständiges Zurücksetzen jederzeit möglich.
+2. **Sendung** — Fahrzeug wählen oder Innenmaße frei eintragen, Positionen über
+   Schnellerfassung, Auswahl oder eingefügte Versandliste erfassen.
+3. **Ladeplan** — Kennzahlen, Hinweise, Ladeplan je Fahrzeug, Rechenweg, Druck.
 
 ## Hinweis
 
-Planungshilfe. Keine Ladungssicherungsfreigabe. Fahrzeuginnenmasse sind Richtwerte
-und muessen im Einzelfall geprueft werden.
+Planungshilfe. Keine Ladungssicherungsfreigabe, keine Achslastberechnung.
+Fahrzeuginnenmaße sind Richtwerte und müssen im Einzelfall geprüft werden.
 
 ## Entwicklung
 
 ```bash
-python3 -m http.server 8080    # lokal oeffnen: http://localhost:8080
-node --test tests/*.test.mjs   # Tests
+npm run serve                  # http://localhost:8080
+npm test                       # Logiktests (node:test, ohne Abhängigkeiten)
+node tests/browser.mjs         # Browserabnahme, benötigt Playwright
 ```
 
-Kein Build, keine Laufzeit-Abhaengigkeiten. Details in [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md).
+Die Browserabnahme findet Playwright über `PLAYWRIGHT=/pfad/zu/node_modules/playwright`
+und überspringt sich selbst, wenn kein Treiber vorhanden ist — die App hat
+bewusst keine Abhängigkeiten.
+
+Aufbau, Datenmodell und Rechenkern: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md).
+Herkunft und Bereinigung: [docs/HERKUNFT.md](docs/HERKUNFT.md).

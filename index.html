@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LAB 01 · LDM Planer</title>
+<meta name="description" content="Lademeter- und Ladungsplanung direkt im Browser. Ladungsträger erfassen, Ladeplan rechnen, Auslastung sehen – alle Daten bleiben lokal.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B1622">
+<link rel="icon" href="assets/logo/ca-favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/logo/ca-favicon-180.png">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap hdr">
+    <div class="marke">
+      <img class="signet" src="assets/logo/ca-signet-dark.png" alt="" width="40" height="40">
+      <div>
+        <p class="lab">Lab 01</p>
+        <h1>LDM Planer</h1>
+        <p class="claim">Lademeter- und Ladungsplanung direkt im Browser.</p>
+      </div>
+    </div>
+    <div class="hdr-akt noprint">
+      <a class="zurueck" href="https://christianaust.eu/">&#8592; Ideenschmiede</a>
+      <button class="btn" id="btnDrucken">Ladeplan drucken</button>
+    </div>
+  </div>
+</header>
+
+<nav class="wrap noprint" aria-label="Arbeitsschritte">
+  <div class="steps" role="tablist">
+    <button class="step" id="tab-stammdaten" role="tab" aria-selected="false" aria-controls="view-stammdaten">
+      <span class="nr">1</span><span class="nm">Stammdaten</span><span class="meta" id="tab-stammdaten-meta">leer</span></button>
+    <button class="step" id="tab-sendung" role="tab" aria-selected="false" aria-controls="view-sendung">
+      <span class="nr">2</span><span class="nm">Sendung</span><span class="meta" id="tab-sendung-meta">leer</span></button>
+    <button class="step" id="tab-ladeplan" role="tab" aria-selected="false" aria-controls="view-ladeplan">
+      <span class="nr">3</span><span class="nm">Ladeplan</span><span class="meta" id="tab-ladeplan-meta">–</span></button>
+  </div>
+</nav>
+
+<main class="wrap">
+<p id="speicherHinweis" class="msg" hidden></p>
+
+<!-- ====================== 1 · STAMMDATEN ====================== -->
+<section id="view-stammdaten" role="tabpanel" aria-labelledby="tab-stammdaten" hidden>
+
+  <div class="card">
+    <h2>Ladungsträger</h2>
+    <p class="sub" id="stammMeta">Noch keine Stammdaten.</p>
+    <div class="aktionen noprint">
+      <button class="btn" id="btnNeu">+ Ladungsträger</button>
+      <button class="btn-sec" id="btnBeispiel">Beispieldaten laden</button>
+      <button class="btn-sec" id="btnExportCsv">Export CSV</button>
+      <button class="btn-sec" id="btnExportJson">Export JSON</button>
+      <button class="btn-sec gefahr" id="btnReset">Alles zurücksetzen</button>
+    </div>
+    <p id="stammMsg" class="msg" hidden></p>
+    <div class="tscroll">
+      <table id="stammTable">
+        <thead><tr>
+          <th style="min-width:120px">ID</th><th style="min-width:180px">Bezeichnung</th>
+          <th class="num">Länge mm</th><th class="num">Breite mm</th><th class="num">Höhe mm</th>
+          <th class="num">Gewicht kg</th><th class="num">Stapel max.</th><th></th>
+        </tr></thead>
+        <tbody id="stammBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card noprint">
+    <h2>Stammdaten importieren<button type="button" class="hlp" data-hlp="import" aria-label="Erklärung"></button></h2>
+    <p class="sub">CSV oder ein JSON-Export dieser App. Die Datei wird im Browser gelesen und nirgendwohin übertragen.</p>
+    <div class="imp">
+      <label class="filebtn">
+        <input type="file" id="importDatei" accept=".csv,.txt,.json,text/csv,application/json">
+        <span>Datei wählen</span>
+      </label>
+      <span class="oder">oder einfügen</span>
+    </div>
+    <textarea id="importText" rows="4" placeholder="id;bezeichnung;laenge_mm;breite_mm;hoehe_mm;gewicht_kg;stapelfaktor_max&#10;EP-01;Europalette;1200;800;1000;400;2"></textarea>
+    <div style="margin-top:8px"><button class="btn-sec" id="btnImportText">Text einlesen</button></div>
+    <p id="importMsg" class="msg" hidden></p>
+    <div id="importVorschau" class="vorschau" hidden></div>
+  </div>
+
+</section>
+
+<!-- ====================== 2 · SENDUNG ====================== -->
+<section id="view-sendung" role="tabpanel" aria-labelledby="tab-sendung" hidden>
+<div class="grid">
+  <div>
+    <div class="card">
+      <h2>Fahrzeug<button type="button" class="hlp noprint" data-hlp="fahrzeug" aria-label="Erklärung"></button></h2>
+      <label class="lbl" for="fzg">Vorlage</label>
+      <select id="fzg"></select>
+      <div class="row4">
+        <div><label class="lbl" for="fL">Innenlänge mm</label><input type="number" id="fL" min="0"></div>
+        <div><label class="lbl" for="fB">Innenbreite mm</label><input type="number" id="fB" min="0"></div>
+        <div><label class="lbl" for="fH">Innenhöhe mm</label><input type="number" id="fH" min="0"></div>
+        <div><label class="lbl" for="fLDM">LDM</label><input type="text" id="fLDM" disabled></div>
+      </div>
+      <div class="row2">
+        <div><label class="lbl" for="fN">Nutzlast kg <span class="opt">optional</span><button type="button" class="hlp noprint" data-hlp="nutzlast" aria-label="Erklärung"></button></label>
+          <input type="number" id="fN" min="0" placeholder="z. B. 24000"></div>
+      </div>
+      <p class="fuss">Vorlagen sind Richtwerte und gelten nicht für jedes reale Fahrzeug. Innenmaße im Einzelfall prüfen.</p>
+    </div>
+
+    <div class="card">
+      <h2>Positionen</h2>
+      <p id="posLeerHinweis" class="sub warnzeile" hidden>Noch keine Stammdaten – zuerst Schritt 1 ausfüllen oder Sonderladungsträger verwenden.</p>
+      <div class="qebox noprint">
+        <label class="lbl" for="qNr">Schnellerfassung · ID, Bezeichnung oder Maß<button type="button" class="hlp" data-hlp="nummer" aria-label="Erklärung"></button></label>
+        <div class="qe">
+          <input id="qNr" placeholder="z. B. EP-01 oder 1200x800">
+          <input id="qMenge" type="number" min="1" placeholder="Menge">
+          <button class="btn-sec" id="btnQeAdd">Übernehmen</button>
+        </div>
+        <div class="qehint" id="qHint">ID, Bezeichnung oder Maß eintippen, Enter, Menge, Enter &#8211; fertig.</div>
+      </div>
+      <div class="tscroll">
+        <table id="posTable">
+          <thead><tr>
+            <th style="width:52%">Ladungsträger · L × B × H</th><th class="num" style="width:17%">Menge</th>
+            <th class="num" style="width:19%">Stapel<button type="button" class="hlp noprint" data-hlp="stapel" aria-label="Erklärung"></button></th><th style="width:12%"></th>
+          </tr></thead>
+          <tbody id="posBody"></tbody>
+        </table>
+      </div>
+      <div class="aktionen noprint" style="margin-top:10px">
+        <button class="btn-sec" id="btnPos">+ Position</button>
+        <button class="btn-sec" id="btnPosSonder">+ Sonderladungsträger</button>
+        <button type="button" class="hlp" data-hlp="sonder" aria-label="Erklärung"></button>
+        <button class="btn-sec gefahr" id="btnLeeren">Leeren</button>
+      </div>
+      <p id="posMsg" class="msg" hidden></p>
+      <p class="fuss">Enter im Mengenfeld hängt direkt die nächste Position an.</p>
+    </div>
+
+    <div class="card noprint">
+      <h2>Versandliste einfügen</h2>
+      <label class="lbl" for="paste">Je Zeile: Menge und ID aus den Stammdaten (Reihenfolge egal)</label>
+      <textarea id="paste" rows="4" placeholder="EP-01&#9;48&#10;12&#9;GB-01&#10;KLT-01 120"></textarea>
+      <div style="margin-top:8px"><button class="btn-sec" id="btnPaste">Zeilen übernehmen</button></div>
+      <p id="importPasteMsg" class="msg" hidden></p>
+    </div>
+  </div>
+
+  <div>
+    <div class="kpis" id="kpis"></div>
+    <div id="hinweise"></div>
+    <div class="card">
+      <h2>Vergleich Stapelfaktor</h2>
+      <div class="cmp" id="cmp"></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ====================== 3 · LADEPLAN ====================== -->
+<section id="view-ladeplan" role="tabpanel" aria-labelledby="tab-ladeplan" hidden>
+  <div class="kpis" id="kpis-plan"></div>
+  <div id="hinweise-plan"></div>
+  <div id="plaene"></div>
+  <div class="card">
+    <h2>Rechenweg</h2>
+    <div id="rechenweg"></div>
+  </div>
+</section>
+
+<div id="hpop" class="hpop noprint" hidden></div>
+
+<footer>
+  <p><b>LAB 01 · LDM Planer</b> <span id="stand"></span></p>
+  <p>Entstanden aus einem realen Problem in der Supply-Chain-Praxis und für die allgemeine Nutzung weiterentwickelt.</p>
+  <p>Alle Planungs- und Stammdaten werden lokal im Browser verarbeitet. Es werden keine Daten übertragen.</p>
+  <p>Rechnet ohne Achslastprüfung. Das Ergebnis ist eine Planungshilfe, keine Ladungssicherungsfreigabe.</p>
+  <p class="noprint"><a href="https://christianaust.eu/">christianaust.eu</a></p>
+</footer>
+</main>
+
+<script type="module">
+  import { start } from './js/app.js'
+  start()
+</script>
+</body>
+</html>

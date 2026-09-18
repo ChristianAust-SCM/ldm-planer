@@ -1,92 +1,116 @@
 # LAB 01 · LDM Planer — Architektur
 
-Stand: 2026-09-18 · Status: **Geruest, Implementierung ausstehend (Referenzfassung fehlt)**
+Stand: 2026-09-18 · Status: **V1 implementiert, Tests grün**
 
 ## Zweck
 
-Oeffentliche, allgemeine Fassung eines Lademeter- und Ladungsplaners.
-Eigenstaendige statische Web-App, getrennt vom privaten Cockpit.
+Öffentliche, allgemeine Fassung eines Lademeter- und Ladungsplaners.
+Eigenständige statische Web-App, getrennt vom privaten Cockpit.
 Zieladresse: `ldm.christianaust.eu`.
 
 ## Leitentscheidungen
 
-| Thema | Entscheidung | Begruendung |
+| Thema | Entscheidung | Begründung |
 |---|---|---|
-| Framework | keines, Vanilla JS (ES-Module) | statisch hostbar, schnelle Ladezeit, wartbar, kein Build-Zwang |
-| Build | kein Bundler in V1 | native ES-Module reichen; Pages liefert statisch aus |
-| Struktur | mehrere Module statt einer HTML-Datei | Referenz ist eine Einzeldatei; Aufteilung nur nach Zustaendigkeit |
+| Framework | keines, Vanilla JS (ES-Module) | statisch hostbar, schnelle Ladezeit, wartbar, kein Build |
+| Build | keiner | native ES-Module; GitHub Pages liefert die Dateien unverändert aus |
+| Abhängigkeiten | null zur Laufzeit | nichts, was altert, bricht oder nachgeladen werden muss |
+| Struktur | Module nach Zuständigkeit | die Ursprungsfassung war eine Einzeldatei mit ~850 Zeilen |
 | Persistenz | `localStorage` | kein Backend, kein Konto, Daten bleiben im Browser |
-| Uebertragung | keine | keine Analytics, keine Requests mit Planungsdaten |
-| Tests | `node:test` (Standardbibliothek) | keine zusaetzliche Abhaengigkeit fuer Logiktests |
-| XLSX | offen, siehe unten | Entscheidung erst mit der Referenzfassung |
+| Übertragung | keine | keine Analytics, keine Requests mit Planungsdaten |
+| Tests | `node:test` + Playwright (extern) | Logiktests ohne Abhängigkeit, Browsertests optional |
+| XLSX | **nicht in V1** | siehe unten |
 | Hosting | GitHub Pages + Cloudflare-DNS (CNAME) | identisches Muster wie `tisch7.christianaust.eu` |
 
 ## Verzeichnisse
 
 ```
-index.html                 App-Shell, Schrittfolge Stammdaten -> Sendung -> Ladeplan -> Ergebnis
-assets/css/app.css         Branding (dunkel, Orange-Akzent), Print-Styles
-assets/logo/               CA-Signet/Favicons, aus christianaust.eu uebernommen
-js/state.js                zentraler App-State
-js/storage.js              localStorage, Export/Import/Reset der Stammdaten
-js/masterdata.js           CRUD Ladungstraeger
-js/validate.js             Validierung (Pflichtfelder, Masse, doppelte IDs, Stapelfaktor >= 1)
-js/import-csv.js           CSV-Parser inkl. Header-Erkennung und Spaltenzuordnung
-js/import-xlsx.js          optional, nur falls Abhaengigkeit bewusst akzeptiert
-js/vehicles.js             Fahrzeugvorlagen + freie Masse + Nutzlast
-js/ldm-core.js             >>> RECHENKERN — wartet auf die Referenzfassung <<<
-js/render-plan.js          Draufsicht + Seitenansicht (Inline-SVG)
-js/render-result.js        Auslastung, Restkapazitaet, Rechenweg, Stapelfaktorvergleich
-js/print.js                Druckansicht
-data/                      neutrale Beispieldaten, Fahrzeugvorlagen, CSV-Importvorlage
-tests/                     node:test
+index.html                 App-Shell, Schrittfolge Stammdaten → Sendung → Ladeplan
+assets/css/app.css         Branding (dunkel, Orange-Akzent), Druckstile
+assets/logo/               CA-Signet und Favicons
+js/app.js                  Zustand, Ereignisse, Oberfläche
+js/ldm-core.js             Rechenkern — ohne DOM, ohne Stammdaten, vollständig testbar
+js/masterdata.js           Bestand, Variantenbildung, Suche
+js/validate.js             Validierung und Zahlformate
+js/import-csv.js           CSV lesen und schreiben, Header-Erkennung, Spaltenzuordnung
+js/storage.js              localStorage, Export/Import/Reset, Datei-Download
+js/render-plan.js          Draufsicht und Seitenansicht als Inline-SVG
+js/render-result.js        Kennzahlen, Hinweise, Ladepläne, Rechenweg, Vergleich
+js/help.js                 Erklärungen an Ort und Stelle
+js/format.js               Zahlformate und kleine Helfer
+data/beispieldaten.js      neutrale Beispiel-Ladungsträger und Fahrzeugvorlagen
+data/import-vorlage.csv    Vorlage für den CSV-Import
+tests/                     node:test (Logik) und browser.mjs (Playwright)
 docs/                      diese Dokumente
 ```
 
-## Datenmodell Ladungstraeger
+## Datenmodell Ladungsträger
 
 | Feld | Typ | Pflicht | Regel |
 |---|---|---|---|
 | `id` | string | ja | eindeutig im Bestand |
 | `bezeichnung` | string | ja | frei |
-| `laenge_mm` | integer | ja | > 0 |
-| `breite_mm` | integer | ja | > 0 |
-| `hoehe_mm` | integer | ja | > 0 |
-| `gewicht_kg` | number | nein | >= 0, Default 0 |
-| `stapelfaktor_max` | integer | ja | >= 1 (1 = nicht stapelbar) |
-| `kategorie` | string | nein | rein informativ |
+| `laenge_mm` | integer | ja | > 0, ≤ 30.000 |
+| `breite_mm` | integer | ja | > 0, ≤ 30.000 |
+| `hoehe_mm` | integer | ja | > 0, ≤ 30.000 |
+| `gewicht_kg` | number | nein | ≥ 0, Default 0 |
+| `stapelfaktor_max` | integer | ja | ≥ 1 (1 = nicht stapelbar) |
+| `kategorie` | string | nein | rein informativ, wird importiert und exportiert |
+
+Zahlen werden in deutscher und englischer Schreibweise angenommen
+(`1.200`, `1.200,5`, `1200.5`). Maße in mm, Gewicht in kg.
 
 ## Datenmodell Fahrzeug
 
-`innenlaenge_mm`, `innenbreite_mm`, `innenhoehe_mm` (Pflicht, > 0), `nutzlast_kg` (optional).
-Vorlagen sind Richtwerte und vollstaendig ueberschreibbar.
+`l`, `b`, `h` (Innenmaße in mm, Pflicht) und `nutzlast` (kg, optional).
+Vorlagen sind Richtwerte und vollständig überschreibbar; weicht ein Wert ab,
+springt die Auswahl selbsttätig auf „Freie Maße“.
 
-## Rechenkern — bewusst offen
+## Rechenkern
 
-Die Referenzfassung (urspruenglich fuer einen Kunden entwickelt) enthaelt die erprobte
-Logik fuer Lademeterberechnung, Stellplaetze, Gruppierung gleicher Grundflaechen,
-Pruefung beider Ausrichtungen, Hoehenbegrenzung, Stapelung, Verteilung auf mehrere
-Fahrzeuge, Restkapazitaet und Rechenweg.
+`js/ldm-core.js` enthält die Logik der Ursprungsfassung, unverändert in der
+Sache und nur entkoppelt:
 
-Diese Logik wird **uebernommen und bereinigt, nicht neu erfunden**.
-`js/ldm-core.js` bleibt bis zum Vorliegen der Referenz leer.
+1. **Gruppierung** nach Grundfläche, unabhängig von der Kantenreihenfolge.
+   Mehrere Positionen mit gleicher Grundfläche rechnen zusammen; es gelten der
+   höchste Träger und der kleinste Stapelfaktor der Gruppe.
+2. **Höhenbegrenzung**: `floor(Innenhöhe / Trägerhöhe)` deckelt den Stapelfaktor.
+3. **Stellplätze**: `ceil(Menge / Stapelfaktor)`, Rest bleibt ein angebrochener Stapel.
+4. **Ausrichtung**: beide Lagen werden durchgerechnet, gewählt wird die kürzere
+   Ladelänge (Tiebreak: kleinere LDM je Stellplatz, dann mehr Stück je Reihe).
+5. **Verteilung** auf Fahrzeuge: First Fit, tiefste Reihen zuerst.
+6. **Hinweise** zu Höhe, Mischhöhen, Innenbreite, Schlussreihe, Restbreite,
+   nicht passenden Trägern und Nutzlast.
 
-## Gewicht (neu gegenueber der Referenz)
+Der Kern kennt weder DOM noch Stammdaten. Er bekommt aufgelöste Positionen
+(`{menge, l, b, h, stapel, gewicht}`) und ein Fahrzeug — deshalb ist er
+vollständig ohne Browser testbar.
 
-V1: Gewicht je Ladungstraeger, Gesamtgewicht der Sendung, optionale Nutzlast je Fahrzeug,
-Warnung bei Ueberschreitung. **Keine** Achslastberechnung, **keine** Aussage zur
-Ladungssicherung.
+## Gewicht (neu gegenüber der Ursprungsfassung)
 
-## XLSX — offene Abwaegung
+Gewicht je Ladungsträger, Gesamtgewicht der Sendung, optionale Nutzlast je
+Fahrzeug, Warnung bei Überschreitung. Die Verteilung auf Fahrzeuge richtet sich
+weiterhin nach der **Ladelänge**, nicht nach dem Gewicht — eine Überschreitung
+wird gemeldet, nicht automatisch aufgelöst.
 
-CSV ist in V1 gesetzt und abhaengigkeitsfrei. Fuer XLSX kaeme SheetJS (`xlsx`) in Frage:
-lokal vendored statt CDN, Version fix, Lizenz und CVE-Stand vor Aufnahme zu pruefen.
-Entscheidung erst zusammen mit der Referenzfassung, um den Umfang von V1 nicht vorab
-aufzublaehen.
+Teilen sich Träger mit unterschiedlichem Gewicht eine Grundfläche, rechnet die
+Verteilung je Fahrzeug mit dem Mittelwert der Gruppe; die Gesamtsumme bleibt
+exakt. **Keine** Achslastberechnung, **keine** Aussage zur Ladungssicherung.
 
-## Hosting (vorbereitet, noch nicht eingerichtet)
+## XLSX — bewusst nicht in V1
 
-Vorbild `tisch7.christianaust.eu`: eigenes Repo -> GitHub Pages -> Custom Domain per
-CNAME auf `christianaust-scm.github.io`, DNS-only in Cloudflare.
-Apex `christianaust.eu` (A-Records auf GitHub Pages) und `cockpit.christianaust.eu`
-(Cloudflare Pages + Access) bleiben unberuehrt.
+CSV deckt den Anwendungsfall ab und kostet keine Abhängigkeit. XLSX bräuchte
+SheetJS: rund 900 kB, eigene CVE-Historie, Lizenzwechsel in der Vergangenheit.
+Das widerspricht dem Grundsatz „null Laufzeitabhängigkeiten“ für einen Nutzen,
+den ein Export aus Excel nach CSV in zwei Klicks ebenfalls liefert.
+Der Import erkennt Trennzeichen und Spalten selbsttätig, damit genau dieser Weg
+bequem bleibt. Sollte XLSX später kommen: lokal vendored, Version fix,
+Lizenz- und CVE-Stand dokumentiert.
+
+## Hosting
+
+Vorbild `tisch7.christianaust.eu`: eigenes Repo → GitHub Pages
+(`build_type: legacy`, Quelle `main` / Wurzel) → Custom Domain per `CNAME` auf
+`christianaust-scm.github.io`, in Cloudflare **DNS-only**.
+Apex `christianaust.eu` (A-Records auf GitHub Pages) und
+`cockpit.christianaust.eu` (Cloudflare Pages + Access) bleiben unberührt.
