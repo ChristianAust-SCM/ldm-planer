@@ -6,7 +6,10 @@ Stand: 2026-09-18 · Status: **V1.1 mit Fahrzeugbibliothek und CA-Silhouetten, T
 
 Öffentliche, allgemeine Fassung eines Lademeter- und Ladungsplaners.
 Eigenständige statische Web-App, getrennt vom privaten Cockpit.
-Zieladresse: `ldm.christianaust.eu`, bis dahin `christianaust.eu/ldm-planer/`.
+Adresse: **https://ldm.christianaust.eu** — eingerichtet am 18.09.2026 als
+GitHub-Pages-Custom-Domain, CNAME `ldm` → `christianaust-scm.github.io`,
+DNS-only in Cloudflare. Der frühere Pfad `christianaust.eu/ldm-planer/`
+leitet dauerhaft (301) auf die Subdomain weiter.
 
 ## Hauptweg
 

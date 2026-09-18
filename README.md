@@ -2,7 +2,8 @@
 
 Lademeter- und Ladungsplanung direkt im Browser.
 
-Teil der persönlichen Ideenschmiede auf [christianaust.eu](https://christianaust.eu).
+**https://ldm.christianaust.eu** — Teil der persönlichen Ideenschmiede auf
+[christianaust.eu](https://christianaust.eu).
 
 ## Was es tut
 
