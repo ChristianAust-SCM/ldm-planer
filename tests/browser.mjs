@@ -68,6 +68,9 @@ async function main() {
   }
   const positionen = () => page.locator('#posBody tr').count()
   const leeren = async () => {
+    if (!(await page.locator('#btnLeeren').isVisible())) {
+      await page.click('#btnZurueckPlaner'); await warte(250)
+    }
     page.once('dialog', d => d.accept())
     await page.click('#btnLeeren'); await warte(200)
   }
@@ -245,9 +248,76 @@ async function main() {
       pruefe(`Export ${endung}`, dl.suggestedFilename().endsWith(endung), dl.suggestedFilename())
     }
 
+    /* ---------- N · Abnahmefall aus dem Berechnungs-Audit ---------- */
+    console.log('\nN · Abnahmefall: Kennzahlen und Terminologie')
+    await page.click('#btnZurueckPlaner'); await warte(250)
+    await leeren()
+    await page.click('#tab-manuell')
+    await page.selectOption('#fzg', 'mega')
+    await page.fill('#fN', '')
+    await page.locator('#fN').blur()
+    await manuell('Gitterbox', 1200, 1000, 1000, 88, 14, 3, '23655')
+    await manuell('KLT 888', 1400, 800, 1000, 200, 12, 3)
+    await page.click('#btnRechnen'); await warte(500)
+    const kpiN = (await page.locator('#kpis').textContent()).replace(/\s/g, '')
+    pruefe('Begriff „Benötigte Ladelänge" statt LDM', /BenötigteLadelänge\(m\)/.test(kpiN), kpiN.slice(0, 160))
+    pruefe('Begriff „Freie Ladelänge" statt Rest-LDM', /FreieLadelänge\(m\)/.test(kpiN))
+    pruefe('kein „Rest-LDM" mehr in der Oberfläche', !/Rest-LDM/.test(kpiN))
+    pruefe('Ladelänge 5,80 m', /BenötigteLadelänge\(m\)\??5,80/.test(kpiN), kpiN.slice(0, 200))
+    pruefe('LDM 4,37', /LDM\??4,37/.test(kpiN), kpiN.slice(0, 200))
+    pruefe('freie Ladelänge 7,80 m', /FreieLadelänge\(m\)\??7,80/.test(kpiN))
+    pruefe('Auslastung 42,6 %', /42,6/.test(kpiN))
+    pruefe('Gesamtgewicht 3.632 kg', /3\.632/.test(kpiN))
+    pruefe('ein Fahrzeug', /BenötigteFahrzeuge1[^0-9]/.test(kpiN))
+
+    await page.locator('#detailsKarte summary').click(); await warte(300)
+    const weg = await page.locator('#rechenweg').textContent()
+    pruefe('Rechenweg zeigt beide Herleitungen', /Lademeter \(flächenbasiert\)/.test(weg) && /Ladelänge des erzeugten Ladeplans/.test(weg))
+    pruefe('Rechenweg nennt die Formel', /belegte Grundfläche ÷ 2,40 m/.test(weg))
+    pruefe('Rechenweg beziffert die Differenz', /Differenz 1,43 m/.test(weg), weg.slice(-260))
+    pruefe('LDM je Gruppe ausgewiesen', /2,50/.test(weg) && /1,87/.test(weg))
+    pruefe('Schlussreihen ausgewiesen', /letzte 1 von 2/.test(weg) && /letzte 1 von 3/.test(weg), weg.slice(0, 400))
+
+    /* ---------- O · Überlänge (V1-Blocker aus dem Audit) ---------- */
+    console.log('\nO · Überlänge wird erkannt')
+    await leeren()
+    await manuell('Langgut', 15000, 2000, 1000, 500, 1, 1)
+    await page.click('#btnRechnen'); await warte(400)
+    const hinweisO = await page.locator('#hinweise').textContent()
+    pruefe('Fehlermeldung „Zu lang"', /Zu lang/.test(hinweisO), hinweisO.slice(0, 200))
+    pruefe('Meldung nennt die Innenlänge', /Innenlänge/.test(hinweisO))
+    const kpiO = (await page.locator('#kpis').textContent()).replace(/\s/g, '')
+    pruefe('kein Fahrzeug ausgewiesen', /BenötigteFahrzeuge0[^0-9]/.test(kpiO), kpiO.slice(0, 120))
+    pruefe('keine Auslastung über 100 %', !/1[0-9][0-9],\d\s*%/.test(await page.locator('#kpis').textContent()))
+    pruefe('kein Ladeplan gezeichnet', await page.locator('#plaene svg').count() === 0)
+
+    console.log('\nO2 · zu breiter Träger bleibt getrennt gemeldet')
+    await leeren()
+    await manuell('Zu breit', 3000, 2600, 1000, 500, 1, 1)
+    await page.click('#btnRechnen'); await warte(400)
+    pruefe('Fehlermeldung „Zu breit"', /Zu breit/.test(await page.locator('#hinweise').textContent()))
+
+    console.log('\nO3 · knapp über Fahrzeuglänge verteilt sauber')
+    await leeren()
+    await manuell('Block', 2400, 1360, 1000, 100, 11, 1)
+    await page.click('#btnRechnen'); await warte(400)
+    const kpiO3 = (await page.locator('#kpis').textContent()).replace(/\s/g, '')
+    pruefe('zwei Fahrzeuge', /BenötigteFahrzeuge2[^0-9]/.test(kpiO3), kpiO3.slice(0, 120))
+    const belegt = await page.evaluate(() => [...document.querySelectorAll('#plaene .truckhd .meta')].map(e => e.textContent.trim()))
+    pruefe('kein Fahrzeug über der Innenlänge', belegt.every(t => {
+      const m = t.match(/([\d.,]+)\s*\/\s*([\d.,]+)/)
+      if (!m) return false
+      const zahl = x => Number(x.replace(/\./g, '').replace(',', '.'))
+      return zahl(m[1]) <= zahl(m[2]) + 0.001
+    }), belegt.join(' | '))
+
     /* ---------- L · Druckansicht ---------- */
     console.log('\nL · Druckansicht')
-    await page.click('#btnZurueckPlaner'); await warte(200)
+    /* Die Abschnitte N und O enden bereits im Planer — hier steht eine Sendung mit Ladeplan */
+    await leeren()
+    await manuell('Gitterbox', 1240, 835, 970, 700, 44, 3)
+    await manuell('Europalette', 1200, 800, 1000, 400, 30, 2)
+    await page.click('#btnRechnen'); await warte(400)
     await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')))
     await page.emulateMedia({ media: 'print' }); await warte(300)
     pruefe('Ladeplan im Druck sichtbar', await page.locator('#plaene .truckblk').first().isVisible())

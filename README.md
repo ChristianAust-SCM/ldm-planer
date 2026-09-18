@@ -7,9 +7,14 @@ Teil der persönlichen Ideenschmiede auf [christianaust.eu](https://christianaus
 ## Was es tut
 
 Fahrzeug wählen, Ladung erfassen, Ladeplan rechnen:
-Lademeter, Stellplätze, Stapelung, Verteilung auf mehrere Fahrzeuge, Auslastung,
-Restkapazität und Gewicht — mit Draufsicht, Seitenansicht, Stapelfaktorvergleich
-und nachvollziehbarem Rechenweg.
+benötigte Ladelänge, Lademeter, Stellplätze, Stapelung, Verteilung auf mehrere
+Fahrzeuge, Auslastung, freie Ladelänge und Gewicht — mit Draufsicht,
+Seitenansicht, Stapelfaktorvergleich und nachvollziehbarem Rechenweg.
+
+**Zwei Kennzahlen, zwei Fragen:** die *benötigte Ladelänge* ist die tatsächlich
+gebrauchte Fahrzeuglänge des erzeugten Ladeplans, *LDM* die klassische
+flächenbasierte Kennzahl (belegte Grundfläche ÷ 2,40 m). Sie können auseinander
+liegen; der Rechenweg zeigt beide Herleitungen und beziffert die Differenz.
 
 Entstanden aus einem realen Problem in der Supply-Chain-Praxis und für die
 allgemeine Nutzung weiterentwickelt.
@@ -26,7 +31,8 @@ Siehe [docs/DATENSCHUTZ.md](docs/DATENSCHUTZ.md).
 2. **Ladung erfassen** — Maße, Menge und Stapelfaktor genügen. Wer will, übernimmt
    die Werte aus eigenen Stammdaten.
 3. **Ladeplan berechnen** — Kennzahlen, Hinweise, Draufsicht, Seitenansicht,
-   Rechenweg, Stapelfaktorvergleich, Druck.
+   Rechenweg, Stapelfaktorvergleich, Druck. Passt ein Träger nicht in Länge oder
+   Breite des Fahrzeugs, sagt die App das, statt einen unmöglichen Plan zu zeigen.
 
 **Stammdaten sind optional.** Sie liegen in einer eigenen Ansicht und lassen sich
 manuell pflegen, aus Excel (.xlsx) oder CSV importieren, exportieren und

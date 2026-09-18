@@ -47,6 +47,8 @@ Ein Kundenname war in der Referenzdatei nicht enthalten; geprüft wurde trotzdem
 - Schrittführung Stammdaten → Sendung → Ladeplan
 - Persistenz im Browser über Sitzungen hinweg
 - XLSX-Import über einen eigenen Leser, ohne Fremdbibliothek
+- klassische LDM-Kennzahl neben der Ladelänge, beide im Rechenweg hergeleitet
+- Längenprüfung des Fahrzeugs (die Ursprungsfassung prüfte nur die Breite)
 - Positionen bearbeiten, duplizieren, löschen
 - Tests: Logik (`node:test`) und Browserabnahme (Playwright)
 

@@ -6,9 +6,16 @@
  */
 
 export const HILFE = {
-  ldm: ['Lademeter',
-    '<p>Ein Lademeter ist ein laufender Meter Ladefläche über die <b>volle Fahrzeugbreite</b>. Zwei Ladungsträger von 1,20 m nebeneinander ergeben zusammen einen Lademeter, nicht zwei.</p>'
-    + '<p><b>Abweichung zum Spediteur:</b> Viele Speditionen runden je Position auf halbe oder volle Meter auf. Hier werden erst alle Stellplätze zusammengezählt und dann gerundet. Bei Sendungen mit vielen kleinen Positionen macht das schnell ein bis zwei Meter Unterschied.</p>'],
+  ladelaenge: ['Benötigte Ladelänge',
+    '<p>Die <b>tatsächlich benötigte Fahrzeuglänge</b> des erzeugten Ladeplans: alle Reihen hintereinander, jede so tief wie der Träger in der gewählten Ausrichtung.</p>'
+    + '<p>Eine nur teilweise belegte Schlussreihe kostet die volle Reihenlänge – der Platz daneben bleibt leer, verbraucht aber Ladefläche. Deshalb liegt dieser Wert oft <b>über</b> der flächenbasierten LDM-Kennzahl.</p>'
+    + '<p>Für die Disposition ist das die maßgebliche Zahl: sie sagt, wie viel Meter Fahrzeug tatsächlich gebraucht werden.</p>'],
+
+  ldm: ['Lademeter (LDM)',
+    '<p>Die klassische, <b>flächenbasierte</b> Kennzahl der Logistik: ein Lademeter ist ein laufender Meter Ladefläche über die volle Fahrzeugbreite.</p>'
+    + '<p><b>LDM = belegte Grundfläche ÷ 2,40 m</b> Bezugsbreite. Gerechnet wird mit den Stellplätzen nach wirksamem Stapelfaktor – gestapelte Träger belegen dieselbe Grundfläche.</p>'
+    + '<p><b>Nicht dasselbe wie die Ladelänge:</b> die LDM-Kennzahl kennt keine halb belegten Reihen und keine ungenutzte Restbreite. Der Rechenweg zeigt beide Herleitungen und beziffert die Differenz.</p>'
+    + '<p>Speditionen runden zudem häufig je Position auf halbe oder volle Meter auf – auch davon weicht dieser Wert ab.</p>'],
 
   nutzlast: ['Nutzlast',
     '<p>Optional. Ist eine Nutzlast hinterlegt, wird das geplante Gewicht je Fahrzeug dagegen geprüft und bei Überschreitung gewarnt.</p>'
@@ -31,11 +38,11 @@ export const HILFE = {
     + '<p>„1.200 mm quer“ heißt: die 1.200-mm-Kante liegt zur Fahrzeugbreite. Bei 2.440 mm Innenbreite passen zwei nebeneinander, jede Reihe ist 1.000 mm tief – macht 0,50 m je Stellplatz.</p>'],
 
   auslastung: ['Auslastung',
-    '<p>Belegte Ladelänge im Verhältnis zur Kapazität <b>aller eingesetzten Fahrzeuge</b>. Bei zwei Fahrzeugen ist der Bezug also die doppelte Ladelänge.</p>'
+    '<p>Bezugsgröße ist die <b>Ladelänge</b>, nicht die LDM-Kennzahl: belegte Ladelänge im Verhältnis zur Länge <b>aller eingesetzten Fahrzeuge</b>. Bei zwei Fahrzeugen ist der Bezug also die doppelte Ladelänge.</p>'
     + '<p>Ein Wert knapp über 50 % bei zwei Fahrzeugen heißt: Das zweite Fahrzeug ist fast leer. Ein Blick auf den Stapelfaktor-Vergleich lohnt sich dann.</p>'],
 
   rest: ['Freie Ladelänge',
-    '<p>Was auf dem <b>letzten</b> Fahrzeug noch frei ist. Der Hinweis unter jedem Ladeplan rechnet das in Ladungsträger um: wie viele Stück welcher Grundfläche noch mitgehen könnten.</p>'
+    '<p>Was auf dem <b>letzten</b> Fahrzeug an Ladelänge noch frei ist: Innenlänge minus belegte Ladelänge. Der Hinweis unter jedem Ladeplan rechnet das in Ladungsträger um: wie viele Stück welcher Grundfläche noch mitgehen könnten.</p>'
     + '<p>Nützlich, wenn eine Sendung ohnehin fährt und Restplatz genutzt werden soll.</p>'],
 
   gewicht: ['Gewicht',

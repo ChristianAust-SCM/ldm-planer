@@ -16,13 +16,21 @@
  */
 export const FARBEN = ['#C4611A', '#2D6FA8', '#2F7D52', '#6B4E9E', '#9A6B0A'];
 
-/* Beste Ausrichtung: minimale tatsächliche Ladelänge für die Stellplatzzahl */
-export function ausrichtung(l, b, innenBreite, stellplaetze) {
+/**
+ * Beste Ausrichtung: minimale tatsächliche Ladelänge für die Stellplatzzahl.
+ *
+ * Eine Ausrichtung zählt nur, wenn sie quer in die Innenbreite passt **und**
+ * ihre Reihentiefe die Innenlänge nicht überschreitet — eine Reihe, die tiefer
+ * ist als die Ladefläche, gibt es physisch nicht.
+ *
+ * @param {number} innenLaenge mm; ohne Angabe wird die Länge nicht geprüft
+ */
+export function ausrichtung(l, b, innenBreite, stellplaetze, innenLaenge = Infinity) {
   const sp = Math.max(1, stellplaetze || 1)
   const opt = []
   for (const [quer, tief] of [[l, b], [b, l]]) {
     const n = Math.floor(innenBreite / quer)
-    if (n >= 1) {
+    if (n >= 1 && tief <= innenLaenge) {
       const reihen = Math.ceil(sp / n)
       opt.push({ quer, tief, proReihe: n, ldm: (tief / 1000) / n, reihen, laenge: reihen * tief / 1000 })
     }
@@ -31,6 +39,9 @@ export function ausrichtung(l, b, innenBreite, stellplaetze) {
   opt.sort((a, b) => a.laenge - b.laenge || a.ldm - b.ldm || b.proReihe - a.proReihe)
   return opt[0]
 }
+
+/** Bezugsbreite der klassischen, flächenbasierten Lademeter-Kennzahl */
+export const LDM_BREITE = 2.4
 
 const n0 = x => x.toLocaleString('de-DE', { maximumFractionDigits: 0 })
 const n2 = x => x.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -90,16 +101,30 @@ export function planen({ positionen = [], fahrzeug, stapelUeberschreibung = null
     }
 
     g.stellplaetze = Math.ceil(g.menge / g.stapel)
+    /* Klassische Lademeter: belegte Grundfläche der Stellplätze ÷ Bezugsbreite */
+    g.flaecheJeStellplatz = (g.l / 1000) * (g.b / 1000)
+    g.flaeche = g.stellplaetze * g.flaecheJeStellplatz
+    g.ldm = g.flaeche / LDM_BREITE
     /* Reale Verteilung: volle Stapel, dann ein angebrochener Rest */
     g.voll = Math.floor(g.menge / g.stapel)
     g.rest = g.menge - g.voll * g.stapel
     g.stapelListe = [...Array(g.voll).fill(g.stapel), ...(g.rest ? [g.rest] : [])]
 
-    const a = ausrichtung(g.l, g.b, f.b, g.stellplaetze)
+    const a = ausrichtung(g.l, g.b, f.b, g.stellplaetze, f.l)
     if (!a) {
       g.fehler = true
-      hinweise.push({ t: 'err', k: 'Passt nicht', s: `${gName(g)} (${n0(g.l)} × ${n0(g.b)} mm) ist in keiner Ausrichtung `
-        + `schmaler als die Innenbreite von ${n0(f.b)} mm. Position aus der Berechnung ausgenommen.` })
+      /* Zwei verschiedene Ursachen, zwei verschiedene Meldungen */
+      const lagen = [[g.l, g.b], [g.b, g.l]]
+      const passtQuer = lagen.filter(([quer]) => quer <= f.b)
+      if (!passtQuer.length) {
+        hinweise.push({ t: 'err', k: 'Zu breit', s: `${gName(g)} ist in keiner Ausrichtung schmaler als die `
+          + `Innenbreite von ${n0(f.b)} mm. Position aus der Berechnung ausgenommen.` })
+      } else {
+        const kuerzeste = Math.min(...passtQuer.map(([, tief]) => tief))
+        hinweise.push({ t: 'err', k: 'Zu lang', s: `${gName(g)} braucht selbst in der günstigsten Ausrichtung `
+          + `${n0(kuerzeste)} mm Ladelänge und passt damit nicht in die Innenlänge von ${n0(f.l)} mm. `
+          + `Position aus der Berechnung ausgenommen.` })
+      }
       continue
     }
     g.a = a
@@ -158,13 +183,18 @@ export function planen({ positionen = [], fahrzeug, stapelUeberschreibung = null
 
   const gesamt = reihen.reduce((s, r) => s + r.tief, 0)
   const gewichtGesamt = liste.reduce((s, g) => s + (g.fehler ? 0 : g.gewichtSumme), 0)
+  const gueltig = liste.filter(g => !g.fehler)
 
   return {
     f, kapa,
-    gruppen: liste.filter(g => !g.fehler),
+    gruppen: gueltig,
     lkw, hinweise, gesamt,
-    stueck: liste.reduce((s, g) => s + (g.fehler ? 0 : g.menge), 0),
+    stueck: gueltig.reduce((s, g) => s + g.menge, 0),
     gewicht: gewichtGesamt,
+    /* Flächenbasierte Kennzahl, unabhängig von der Reihenbildung */
+    ldm: gueltig.reduce((s, g) => s + g.ldm, 0),
+    flaeche: gueltig.reduce((s, g) => s + g.flaeche, 0),
+    ldmBreite: LDM_BREITE,
     nutzlast: f.nutzlast,
     ueberladen: lkw.some(t => t.ueberladen)
   }

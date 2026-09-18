@@ -1,6 +1,6 @@
 # LAB 01 · LDM Planer — Architektur
 
-Stand: 2026-09-18 · Status: **V1 mit UX- und Design-Überarbeitung, Tests grün**
+Stand: 2026-09-18 · Status: **V1 nach Berechnungs-Audit, Tests grün**
 
 ## Zweck
 
@@ -90,7 +90,9 @@ Sache und nur entkoppelt:
 2. **Höhenbegrenzung**: `floor(Innenhöhe / Trägerhöhe)` deckelt den Stapelfaktor.
 3. **Stellplätze**: `ceil(Menge / Stapelfaktor)`, Rest bleibt ein angebrochener Stapel.
 4. **Ausrichtung**: beide Lagen werden durchgerechnet, gewählt wird die kürzere
-   Ladelänge (Tiebreak: kleinere LDM je Stellplatz, dann mehr Stück je Reihe).
+   Ladelänge (Tiebreak: kleinerer Längenanteil je Stellplatz, dann mehr Stück je
+   Reihe). Eine Lage zählt nur, wenn sie quer in die Innenbreite passt **und**
+   ihre Reihentiefe die Innenlänge nicht überschreitet.
 5. **Verteilung** auf Fahrzeuge: First Fit, tiefste Reihen zuerst.
 6. **Hinweise** zu Höhe, Mischhöhen, Innenbreite, Schlussreihe, Restbreite,
    nicht passenden Trägern und Nutzlast.
@@ -98,6 +100,36 @@ Sache und nur entkoppelt:
 Der Kern kennt weder DOM noch Stammdaten. Er bekommt aufgelöste Positionen
 (`{menge, l, b, h, stapel, gewicht}`) und ein Fahrzeug — deshalb ist er
 vollständig ohne Browser testbar.
+
+## Zwei Kennzahlen, die nicht dasselbe messen
+
+Das Werkzeug weist bewusst beide aus, weil sie verschiedene Fragen beantworten:
+
+| Kennzahl | Bedeutung | Rechnung |
+|---|---|---|
+| **Benötigte Ladelänge (m)** | die tatsächlich gebrauchte Fahrzeuglänge des erzeugten Ladeplans | Summe aller Reihentiefen |
+| **LDM** | die klassische, flächenbasierte Kennzahl der Logistik | belegte Grundfläche ÷ 2,40 m |
+
+Die LDM-Kennzahl rechnet mit den **Stellplätzen nach wirksamem Stapelfaktor**,
+nicht mit der Stückzahl — gestapelte Träger belegen dieselbe Grundfläche:
+
+```
+LDM = Σ (Stellplätze × Länge_m × Breite_m) / 2,40
+```
+
+Beide Werte stimmen überein, solange jede Reihe voll belegt ist und die
+Bezugsbreite ausgenutzt wird. Teilweise belegte Schlussreihen und ungenutzte
+Ladebreite kosten physisch Platz, den die Flächenrechnung nicht kennt — dann
+liegt die Ladelänge darüber. Der Rechenweg zeigt beide Herleitungen getrennt
+und beziffert die Differenz.
+
+Beispiel aus der Abnahme (14 Gitterboxen 1.200 × 1.000, Stapel 3; 12 Träger
+1.400 × 800, Stapel 3; Mega 13.600 × 2.440 × 3.000):
+5,80 m Ladelänge gegenüber 4,37 LDM — die Differenz von 1,43 m sind genau die
+leeren Plätze der beiden Schlussreihen.
+
+**Auslastung** bezieht sich auf die Ladelänge, nicht auf die LDM-Kennzahl:
+belegte Ladelänge ÷ Länge aller eingesetzten Fahrzeuge.
 
 ## Gewicht (neu gegenüber der Ursprungsfassung)
 
@@ -109,6 +141,21 @@ wird gemeldet, nicht automatisch aufgelöst.
 Teilen sich Träger mit unterschiedlichem Gewicht eine Grundfläche, rechnet die
 Verteilung je Fahrzeug mit dem Mittelwert der Gruppe; die Gesamtsumme bleibt
 exakt. **Keine** Achslastberechnung, **keine** Aussage zur Ladungssicherung.
+
+## Dokumentierte Grenzen der Packlogik
+
+Bewusst einfach gehalten, im Berechnungs-Audit geprüft und für V1 so belassen:
+
+- Gruppen unterschiedlicher Grundfläche teilen sich **keine** Reihe; reale
+  Ladepläne können dadurch kürzer ausfallen als berechnet (konservativ).
+- Eine teilbelegte Schlussreihe kostet die volle Reihenlänge (konservativ).
+- Das **Gewicht je Fahrzeug** verteilt sich mit dem Gruppenmittel; die Summe ist
+  exakt, die Warnung je Fahrzeug ist eine Näherung, wenn Träger gleicher
+  Grundfläche stark unterschiedlich wiegen.
+- Träger gleicher Grundfläche werden übereinander gestapelt, auch wenn es
+  verschiedene Artikel sind.
+- Keine Achslast, keine gewichtsbasierte Reihenoptimierung, kein
+  Bin-Packing über mehrere Grundflächen hinweg.
 
 ## XLSX ohne Fremdbibliothek
 

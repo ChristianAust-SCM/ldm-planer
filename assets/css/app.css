@@ -238,9 +238,8 @@ td .mini { font-size: 11.5px; color: var(--ink-3); }
 .anleitung li { margin-bottom: 5px; }
 .anleitung b { color: var(--ink); }
 
-.kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
-@media (max-width: 1400px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 700px)  { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; margin-bottom: 14px; }
+@media (max-width: 560px)  { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .kpi { background: var(--karte); border: 1px solid var(--linie); border-radius: var(--radius); padding: 11px 13px; }
 .kpi .k { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
 .kpi .v { font-size: 25px; line-height: 1.15; margin-top: 2px; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--navy); }
@@ -318,6 +317,11 @@ svg { display: block; width: 100%; height: auto; }
 .details > summary:hover { color: var(--orange-t); }
 .details-inhalt { padding: 0 18px 18px; border-top: 1px solid var(--linie); }
 .details-inhalt h3 { font-size: 13px; color: var(--navy); margin: 14px 0 8px; }
+.details-inhalt h4 {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--ink-2); margin: 16px 0 7px; padding-bottom: 5px; border-bottom: 1px solid var(--linie);
+}
+.details-inhalt h4:first-child { margin-top: 4px; }
 
 .experte { margin-top: 14px; border-top: 1px solid var(--linie); padding-top: 10px; }
 .experte > summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
@@ -402,7 +406,7 @@ footer b { color: var(--ink-2); }
   .spalte-eingabe { order: 2; }
   .card { border: 1px solid #C9D2DA; break-inside: avoid; margin-bottom: 10px; }
   .truckblk { break-inside: avoid; }
-  .kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   #ergebnisInhalt { display: block !important; }
   .details { display: block; }
   .details > summary { display: none; }
