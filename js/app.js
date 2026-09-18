@@ -115,25 +115,104 @@ function uebernehmeGespeichertesFahrzeug(gespeichert) {
   return f
 }
 
+let pickerOffen = false
+let pickerFilter = 'alle'
+
 function fuelleFahrzeugAuswahl() {
-  const gruppen = KATEGORIEN.map(k => {
-    const eintraege = FAHRZEUGE.filter(f => f.kategorie === k.id)
-    if (!eintraege.length) return ''
-    return `<optgroup label="${esc(k.name)}">`
-      + eintraege.map(f => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('')
-      + '</optgroup>'
-  }).join('')
+  const filter = [{ id: 'alle', kurz: 'Alle' }, ...KATEGORIEN.map(k => ({ id: k.id, kurz: k.kurz || k.name }))]
+  $('fzgFilter').innerHTML = filter.map(f =>
+    `<button type="button" class="filter-chip${f.id === pickerFilter ? ' on' : ''}" data-filter="${esc(f.id)}"
+      aria-pressed="${f.id === pickerFilter}">${esc(f.kurz)}</button>`).join('')
 
-  /* Nicht modellierbar, aber erwähnt — bewusst nicht wählbar */
-  const gesperrt = NICHT_UNTERSTUETZT.length
-    ? `<optgroup label="Noch nicht unterstützt">`
-      + NICHT_UNTERSTUETZT.map(x => `<option value="" disabled>${esc(x.name)} · ${esc(x.grund)}</option>`).join('')
-      + '</optgroup>'
-    : ''
+  $('fzgGesperrt').innerHTML = NICHT_UNTERSTUETZT.map(x =>
+    `<div class="gesperrt"><b>${esc(x.name)}</b><span class="gesperrt-status">Noch nicht unterstützt</span>
+      <span class="gesperrt-grund">${esc(x.grund)}.</span></div>`).join('')
 
-  $('fzg').innerHTML = gruppen + gesperrt
-  $('fzg').value = fahrzeug.typ
+  zeichnePickerListe()
+  zeichnePickerKnopf()
+}
+
+function zeichnePickerListe() {
+  const sichtbar = FAHRZEUGE.filter(f => pickerFilter === 'alle' || f.kategorie === pickerFilter)
+  $('fzgListe').innerHTML = sichtbar.map(f => {
+    /* Höchstens zwei Etiketten, und nur für das Bemerkenswerte */
+    const status = []
+    if (f.status === 'richtwert') status.push('<span class="badge badge-richtwert">Richtwert</span>')
+    if (f.radkaesten === true) status.push('<span class="badge badge-radkasten">Radkästen</span>')
+    return `<li role="option" class="pz" data-id="${esc(f.id)}" tabindex="-1"
+        aria-selected="${f.id === fahrzeug.typ}">
+      <!-- Platz für die später geplanten eigenen Silhouetten -->
+      <span class="pz-bild" hidden aria-hidden="true"></span>
+      <span class="pz-text">
+        <span class="pz-primaer">${esc(f.anzeige)}</span>
+        <span class="pz-sekundaer">${esc(f.referenz)}</span>
+        <span class="pz-masse">${n0(f.l)} × ${n0(f.b)} × ${n0(f.h)} mm</span>
+      </span>
+      ${status.length ? `<span class="pz-status">${status.join('')}</span>` : ''}
+    </li>`
+  }).join('') || '<li class="pz-leer">Keine Vorlage in dieser Kategorie.</li>'
+}
+
+function zeichnePickerKnopf() {
+  const f = fahrzeugOf(fahrzeug.typ) || fahrzeugOf('frei')
+  $('fzgKnopfPrimaer').textContent = f.anzeige
+  $('fzgKnopfSekundaer').textContent = f.referenz
+}
+
+function pickerAuf() {
+  if (pickerOffen) return
+  pickerOffen = true
+  $('fzgPanel').hidden = false
+  $('fzgKnopf').setAttribute('aria-expanded', 'true')
+  /* Die gewählte Vorlage sichtbar machen, auch wenn ein Filter aktiv war */
+  const aktiv = $('fzgListe').querySelector('[aria-selected="true"]')
+  if (aktiv) aktiv.scrollIntoView({ block: 'nearest' })
+}
+
+function pickerZu(zurueckAufKnopf = false) {
+  if (!pickerOffen) return
+  pickerOffen = false
+  $('fzgPanel').hidden = true
+  $('fzgKnopf').setAttribute('aria-expanded', 'false')
+  if (zurueckAufKnopf) $('fzgKnopf').focus()
+}
+
+const pickerZeilen = () => [...$('fzgListe').querySelectorAll('.pz')]
+
+function pickerBewege(von, richtung) {
+  const zeilen = pickerZeilen()
+  if (!zeilen.length) return
+  const i = zeilen.indexOf(von)
+  const ziel = richtung === 'erste' ? 0
+    : richtung === 'letzte' ? zeilen.length - 1
+    : Math.min(zeilen.length - 1, Math.max(0, i + richtung))
+  zeilen[ziel].focus()
+}
+
+function pickerWaehle(id) {
+  const f = fahrzeugOf(id)
+  if (!f) return
+  fahrzeug = { typ: f.id, l: f.l, b: f.b, h: f.h, nutzlast: f.nutzlast || 0 }
+  masseSichtbar(f.id === 'frei')
+  S.schreib(S.SCHLUESSEL.fahrzeug, fahrzeug)
   schreibeMassfelder()
+  zeichnePickerListe()
+  zeichnePickerKnopf()
+  pickerZu(true)
+  zeichneSendung()
+  rechne()
+}
+
+function setzeFilter(id) {
+  pickerFilter = id
+  for (const b of $('fzgFilter').querySelectorAll('[data-filter]')) {
+    const an = b.dataset.filter === id
+    b.classList.toggle('on', an)
+    b.setAttribute('aria-pressed', String(an))
+  }
+  zeichnePickerListe()
+  /* Nach dem Filterwechsel oben beginnen, sonst steht der erste Treffer außerhalb */
+  $('fzgListe').scrollTop = 0
 }
 
 function schreibeMassfelder() {
@@ -143,22 +222,11 @@ function schreibeMassfelder() {
   $('fN').value = fahrzeug.nutzlast || ''
   zeigeLdm()
   zeichneFahrzeugKarte()
+  zeichnePickerKnopf()
 }
 
 function zeigeLdm() {
   $('fLDMText').textContent = fahrzeug.l > 0 ? `Ladelänge ${n2(fahrzeug.l / 1000)} m.` : ''
-}
-
-function fahrzeugWechsel() {
-  const f = fahrzeugOf($('fzg').value)
-  if (!f) return
-  fahrzeug = { typ: f.id, l: f.l, b: f.b, h: f.h, nutzlast: f.nutzlast || 0 }
-  /* Freie Maße öffnet die Felder, eine Vorlage lässt sie zugeklappt */
-  masseSichtbar(f.id === 'frei')
-  S.schreib(S.SCHLUESSEL.fahrzeug, fahrzeug)
-  schreibeMassfelder()
-  zeichneSendung()
-  rechne()
 }
 
 /**
@@ -180,10 +248,11 @@ function fahrzeugMassGeaendert() {
   fahrzeug.h = +$('fH').value || 0
   fahrzeug.nutzlast = +$('fN').value || 0
   fahrzeug.typ = typNachMassaenderung()
-  $('fzg').value = fahrzeug.typ
   S.schreib(S.SCHLUESSEL.fahrzeug, fahrzeug)
   zeigeLdm()
   zeichneFahrzeugKarte()
+  zeichnePickerKnopf()
+  zeichnePickerListe()
   rechne()
 }
 
@@ -203,7 +272,8 @@ function zeichneFahrzeugKarte() {
   const f = fahrzeugOf(fahrzeug.typ) || fahrzeugOf('frei')
   const kat = KATEGORIEN.find(k => k.id === f.kategorie)
 
-  $('fzgName').textContent = f.name
+  /* Der Picker trägt den nutzerorientierten Namen — die Karte den technischen */
+  $('fzgName').textContent = f.aufbau
   $('fzgKat').textContent = kat ? kat.name : ''
   $('fzgStatus').textContent = STATUS_TEXT[f.status] || ''
   $('fzgStatus').className = 'badge ' + (f.status === 'richtwert' ? 'badge-richtwert' : f.status === 'frei' ? 'badge-frei' : 'badge-konkret')
@@ -518,7 +588,8 @@ function rechne() {
   if (!zeigen) return
 
   const p = planen({ positionen: pos, fahrzeug })
-  const name = $('fzg').selectedOptions[0] ? $('fzg').selectedOptions[0].text : 'Fahrzeug'
+  const gewaehlt = fahrzeugOf(fahrzeug.typ)
+  const name = gewaehlt ? gewaehlt.anzeige : 'Fahrzeug'
   const ohneGewicht = positionen.filter(x => x.gewicht === null || x.gewicht === undefined || x.gewicht === '').length
 
   $('kpis').innerHTML = R.kennzahlen(p, name, { ohneGewicht })
@@ -804,7 +875,34 @@ function verbindeEreignisse() {
     setTimeout(() => window.print(), 120)
   })
 
-  $('fzg').addEventListener('change', fahrzeugWechsel)
+  $('fzgKnopf').addEventListener('click', () => (pickerOffen ? pickerZu() : pickerAuf()))
+  $('fzgKnopf').addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      pickerAuf()
+      const zeilen = pickerZeilen()
+      const aktiv = $('fzgListe').querySelector('[aria-selected="true"]')
+      ;(aktiv || zeilen[0])?.focus()
+    }
+  })
+  $('fzgFilter').addEventListener('click', e => {
+    const b = e.target.closest('[data-filter]')
+    if (b) setzeFilter(b.dataset.filter)
+  })
+  $('fzgListe').addEventListener('click', e => {
+    const li = e.target.closest('.pz')
+    if (li) pickerWaehle(li.dataset.id)
+  })
+  $('fzgListe').addEventListener('keydown', e => {
+    const li = e.target.closest('.pz')
+    if (!li) return
+    const tasten = { ArrowDown: 1, ArrowUp: -1, Home: 'erste', End: 'letzte' }
+    if (e.key in tasten) { e.preventDefault(); pickerBewege(li, tasten[e.key]); return }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickerWaehle(li.dataset.id) }
+  })
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && pickerOffen) pickerZu(true) })
+  document.addEventListener('click', e => { if (pickerOffen && !e.target.closest('#fzgPicker')) pickerZu() })
+  document.addEventListener('focusin', e => { if (pickerOffen && !e.target.closest('#fzgPicker')) pickerZu() })
   $('btnMasse').addEventListener('click', () => {
     const an = $('masseBox').hidden
     masseSichtbar(an)

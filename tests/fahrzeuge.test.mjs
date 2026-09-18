@@ -184,3 +184,84 @@ test('die Innenmaße des Abnahmefalls bleiben unabhängig von der Bibliothek gü
   assert.equal(Math.round(p.ldm * 100) / 100, 4.37)
   assert.equal(p.gewicht, 3632)
 })
+
+/* ================================================================
+ * Anzeigenamen (V1.1 UX) — die Fahrzeugdaten selbst bleiben unberührt
+ * ================================================================ */
+
+test('jede Vorlage hat einen nutzerorientierten und einen technischen Namen', () => {
+  for (const f of FAHRZEUGE) {
+    assert.ok(f.anzeige && f.anzeige.length > 3, `${f.id}: Anzeigename fehlt`)
+    assert.ok(f.referenz && f.referenz.length > 3, `${f.id}: Referenzname fehlt`)
+    assert.notEqual(f.anzeige, f.referenz, `${f.id}: beide Namen identisch`)
+  }
+  const anzeigen = FAHRZEUGE.map(f => f.anzeige)
+  assert.equal(new Set(anzeigen).size, anzeigen.length, 'Anzeigenamen müssen unterscheidbar sein')
+})
+
+test('der Anzeigename nennt die Fahrzeugart, die Referenz den Hersteller', () => {
+  assert.equal(fahrzeugOf('sprinter_schutz_m6_plane_2000').anzeige, 'Planensprinter · 4,30 m · ebener Boden')
+  assert.match(fahrzeugOf('sprinter_schutz_m6_plane_2000').referenz, /Schutz M6/)
+  assert.equal(fahrzeugOf('sprinter_schutz_ta6_plane_2000').anzeige, 'Planensprinter · 4,30 m · Tiefpritsche')
+  assert.equal(fahrzeugOf('sprinter_schutz_ta4_plane_2000').anzeige, 'Planensprinter · 3,48 m · Tiefpritsche')
+  assert.equal(fahrzeugOf('krone_mega_liner_3000').anzeige, 'Sattelauflieger · Mega · 3,00 m')
+  assert.equal(fahrzeugOf('atego_818_spier_athlet_plus').anzeige, 'LKW Koffer · 7,5 t')
+  assert.equal(fahrzeugOf('frei').anzeige, 'Freie Fahrzeugmaße')
+  assert.equal(fahrzeugOf('frei').referenz, 'Eigene Innenmaße eingeben')
+})
+
+test('die Anzeigemaße stimmen mit den echten Maßen überein', () => {
+  /* Steht im Namen eine Länge, muss sie zur Innenlänge passen */
+  for (const f of FAHRZEUGE) {
+    const m = f.anzeige.match(/(\d+),(\d{2}) m/)
+    if (!m) continue
+    const genannt = Number(`${m[1]}.${m[2]}`) * 1000
+    const istLaenge = Math.abs(genannt - f.l) <= 10
+    const istHoehe = Math.abs(genannt - f.h) <= 10
+    assert.ok(istLaenge || istHoehe, `${f.id}: „${f.anzeige}" passt zu keinem Maß (${f.l}/${f.h})`)
+  }
+})
+
+test('Planensprinter stehen in der Bibliothek vor den Kastenwagen', () => {
+  const transporter = FAHRZEUGE.filter(f => f.kategorie === 'transporter').map(f => f.id)
+  assert.deepEqual(transporter.slice(0, 3), [
+    'sprinter_schutz_m6_plane_2000',
+    'sprinter_schutz_ta6_plane_2000',
+    'sprinter_schutz_ta4_plane_2000'
+  ])
+})
+
+test('Kategorien tragen einen Kurznamen für die Filterleiste', () => {
+  for (const k of KATEGORIEN) assert.ok(k.kurz, `${k.id}: Kurzname fehlt`)
+  assert.equal(KATEGORIEN.find(k => k.id === 'lkw').kurz, 'LKW')
+})
+
+test('Fahrzeugdaten unverändert gegenüber dem Research-Stand', () => {
+  /* Maße, Nutzlast, Status und Radkästen — die Referenztabelle des Reports */
+  const soll = {
+    transit_l3h3_fwd_srw:           [3533, 1784, 2125, null,  'konkret',   true],
+    transit_l4h3_rwd_awd:           [4256, 1784, 2025, null,  'richtwert', true],
+    sprinter_schutz_m6_plane_2000:  [4300, 2030, 2000, null,  'konkret',   false],
+    sprinter_schutz_ta6_plane_2000: [4300, 2030, 2000, null,  'richtwert', true],
+    sprinter_schutz_ta4_plane_2000: [3480, 2030, 2000, null,  'richtwert', true],
+    spier_aerobox_sprinter_35t:     [4350, 2060, 2100, 940,   'konkret',   null],
+    atego_818_spier_athlet_plus:    [6050, 2496, 2396, null,  'konkret',   null],
+    atego_1224_spier_athlet:        [7200, 2496, 2369, null,  'konkret',   null],
+    man_tgm_18290_spier_thermo:     [7650, 2490, 2400, null,  'konkret',   null],
+    krone_profi_liner_2600:         [13620, 2480, 2600, 33060, 'richtwert', null],
+    krone_profi_liner_2700:         [13620, 2480, 2700, 33060, 'richtwert', null],
+    krone_mega_liner_3000:          [13620, 2480, 3000, 32100, 'konkret',   null],
+    krone_wp73_ls5_cs:              [7280, 2480, 2390, null,  'konkret',   null],
+    krone_wk73_stg:                 [7300, 2470, 2525, null,  'konkret',   null]
+  }
+  assert.equal(Object.keys(soll).length, 14)
+  for (const [id, [l, b, h, nutzlast, status, radkaesten]] of Object.entries(soll)) {
+    const f = fahrzeugOf(id)
+    assert.ok(f, `${id} fehlt`)
+    assert.deepEqual([f.l, f.b, f.h], [l, b, h], `${id}: Maße abweichend`)
+    assert.equal(f.nutzlast, nutzlast, `${id}: Nutzlast abweichend`)
+    assert.equal(f.status, status, `${id}: Status abweichend`)
+    assert.equal(f.radkaesten, radkaesten, `${id}: Radkastenangabe abweichend`)
+    assert.equal(f.palettenplaetze, null, `${id}: Palettenplätze gesetzt`)
+  }
+})

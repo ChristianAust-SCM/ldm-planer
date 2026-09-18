@@ -16,54 +16,20 @@
  */
 
 export const KATEGORIEN = [
-  { id: 'transporter', name: 'Transporter & Express' },
-  { id: 'lkw',         name: 'LKW · Koffer & Plane' },
-  { id: 'sattel',      name: 'Sattelauflieger' },
-  { id: 'wechsel',     name: 'Wechselsysteme' },
-  { id: 'sonder',      name: 'Sonderkonfiguration' }
+  { id: 'transporter', name: 'Transporter & Express', kurz: 'Transporter & Express' },
+  { id: 'lkw',         name: 'LKW · Koffer & Plane',  kurz: 'LKW' },
+  { id: 'sattel',      name: 'Sattelauflieger',       kurz: 'Sattelauflieger' },
+  { id: 'wechsel',     name: 'Wechselsysteme',        kurz: 'Wechselsysteme' },
+  { id: 'sonder',      name: 'Sonderkonfiguration',   kurz: 'Sonderkonfiguration' }
 ]
 
 export const FAHRZEUGE = [
   /* ---------------- Transporter & Express ---------------- */
   {
-    id: 'transit_l3h3_fwd_srw',
-    name: 'Ford Transit L3H3 (FWD/SRW)',
-    kategorie: 'transporter',
-    aufbau: 'Ford · Kastenwagen L3H3, Frontantrieb, Einzelbereifung',
-    l: 3533, b: 1784, h: 2125,
-    nutzlast: null,
-    palettenplaetze: null,
-    status: 'konkret',
-    radkaesten: true,
-    breiteZwischenRadkaesten: 1392,
-    besonderheiten: [
-      'Zwischen den Radkästen nur 1.392 mm lichte Breite',
-      'Türöffnungen sind kleiner als der Innenraum',
-      'Nutzlast hängt von der Konfiguration ab und ist nicht veröffentlicht'
-    ],
-    quelle: { text: 'Ford Transit Broschüre 2025', ref: '[1]' }
-  },
-  {
-    id: 'transit_l4h3_rwd_awd',
-    name: 'Ford Transit L4H3 (RWD/AWD)',
-    kategorie: 'transporter',
-    aufbau: 'Ford · Kastenwagen L4H3, Heck-/Allradantrieb',
-    l: 4256, b: 1784, h: 2025,
-    nutzlast: null,
-    palettenplaetze: null,
-    status: 'richtwert',
-    richtwertGrund: 'Antrieb und Bereifung verändern die nutzbare Breite erheblich.',
-    radkaesten: true,
-    breiteZwischenRadkaesten: null,
-    besonderheiten: [
-      'Bei Doppelbereifung nur 1.154 mm zwischen den Radkästen',
-      'Antrieb und Bereifung vor Einsatz abfragen'
-    ],
-    quelle: { text: 'Ford Transit Broschüre 2025', ref: '[1]' }
-  },
-  {
     id: 'sprinter_schutz_m6_plane_2000',
     name: 'Planensprinter · Schutz M6',
+    anzeige: 'Planensprinter · 4,30 m · ebener Boden',
+    referenz: 'Schutz M6 · Referenzkonfiguration',
     kategorie: 'transporter',
     aufbau: 'MB Sprinter 3,5 t · Schutz Mittelhochpritsche Typ M6 mit Plane',
     l: 4300, b: 2030, h: 2000,
@@ -83,6 +49,8 @@ export const FAHRZEUGE = [
   {
     id: 'sprinter_schutz_ta6_plane_2000',
     name: 'Planensprinter · Schutz TA6',
+    anzeige: 'Planensprinter · 4,30 m · Tiefpritsche',
+    referenz: 'Schutz TA6 · Radkästen',
     kategorie: 'transporter',
     aufbau: 'MB Sprinter 3,5 t · Schutz Tiefpritsche Typ TA6 mit Plane',
     l: 4300, b: 2030, h: 2000,
@@ -104,6 +72,8 @@ export const FAHRZEUGE = [
   {
     id: 'sprinter_schutz_ta4_plane_2000',
     name: 'Planensprinter · Schutz TA4',
+    anzeige: 'Planensprinter · 3,48 m · Tiefpritsche',
+    referenz: 'Schutz TA4 · Radkästen',
     kategorie: 'transporter',
     aufbau: 'MB Sprinter 3,5 t · Schutz Tiefpritsche Typ TA4 mit Plane',
     l: 3480, b: 2030, h: 2000,
@@ -121,11 +91,53 @@ export const FAHRZEUGE = [
     ],
     quelle: { text: 'Mercedes-Benz VanSolution · Aufbauhersteller Schutz; Schutz Tiefpritsche Typ TA', ref: '[16][18]' }
   },
+  {
+    id: 'transit_l3h3_fwd_srw',
+    name: 'Ford Transit L3H3 (FWD/SRW)',
+    anzeige: 'Kastenwagen · 3,53 m',
+    referenz: 'Ford Transit L3H3 · FWD/SRW',
+    kategorie: 'transporter',
+    aufbau: 'Ford · Kastenwagen L3H3, Frontantrieb, Einzelbereifung',
+    l: 3533, b: 1784, h: 2125,
+    nutzlast: null,
+    palettenplaetze: null,
+    status: 'konkret',
+    radkaesten: true,
+    breiteZwischenRadkaesten: 1392,
+    besonderheiten: [
+      'Zwischen den Radkästen nur 1.392 mm lichte Breite',
+      'Türöffnungen sind kleiner als der Innenraum',
+      'Nutzlast hängt von der Konfiguration ab und ist nicht veröffentlicht'
+    ],
+    quelle: { text: 'Ford Transit Broschüre 2025', ref: '[1]' }
+  },
+  {
+    id: 'transit_l4h3_rwd_awd',
+    name: 'Ford Transit L4H3 (RWD/AWD)',
+    anzeige: 'Kastenwagen · 4,26 m',
+    referenz: 'Ford Transit L4H3 · RWD/AWD',
+    kategorie: 'transporter',
+    aufbau: 'Ford · Kastenwagen L4H3, Heck-/Allradantrieb',
+    l: 4256, b: 1784, h: 2025,
+    nutzlast: null,
+    palettenplaetze: null,
+    status: 'richtwert',
+    richtwertGrund: 'Antrieb und Bereifung verändern die nutzbare Breite erheblich.',
+    radkaesten: true,
+    breiteZwischenRadkaesten: null,
+    besonderheiten: [
+      'Bei Doppelbereifung nur 1.154 mm zwischen den Radkästen',
+      'Antrieb und Bereifung vor Einsatz abfragen'
+    ],
+    quelle: { text: 'Ford Transit Broschüre 2025', ref: '[1]' }
+  },
 
   /* ---------------- LKW · Koffer & Plane ---------------- */
   {
     id: 'spier_aerobox_sprinter_35t',
     name: 'Sprinter Koffer · SPIER Aerobox (3,5 t)',
+    anzeige: 'Koffer · 3,5 t',
+    referenz: 'Mercedes-Benz Sprinter · SPIER Aerobox',
     kategorie: 'lkw',
     aufbau: 'MB Sprinter 3,5 t · SPIER Aerobox Leichtbaukoffer',
     l: 4350, b: 2060, h: 2100,
@@ -144,6 +156,8 @@ export const FAHRZEUGE = [
   {
     id: 'atego_818_spier_athlet_plus',
     name: 'Atego 818 · SPIER Athlet plus (7,5 t)',
+    anzeige: 'LKW Koffer · 7,5 t',
+    referenz: 'Mercedes-Benz Atego 818 · SPIER Athlet',
     kategorie: 'lkw',
     aufbau: 'MB Atego 818 L · SPIER Leichtbau-Kofferaufbau',
     l: 6050, b: 2496, h: 2396,
@@ -162,6 +176,8 @@ export const FAHRZEUGE = [
   {
     id: 'atego_1224_spier_athlet',
     name: 'Atego 1224 · SPIER Athlet (12 t)',
+    anzeige: 'LKW Koffer · 12 t',
+    referenz: 'Mercedes-Benz Atego 1224 · SPIER Athlet',
     kategorie: 'lkw',
     aufbau: 'MB Atego 1224 L · SPIER Plywood-Kofferaufbau',
     l: 7200, b: 2496, h: 2369,
@@ -180,6 +196,8 @@ export const FAHRZEUGE = [
   {
     id: 'man_tgm_18290_spier_thermo',
     name: 'MAN TGM 18.290 · SPIER Thermo (18 t)',
+    anzeige: 'LKW Kühlkoffer · 18 t',
+    referenz: 'MAN TGM 18.290 · SPIER Athlet Thermo',
     kategorie: 'lkw',
     aufbau: 'MAN TGM 18.290 · SPIER Athlet Thermo Kühlkoffer',
     l: 7650, b: 2490, h: 2400,
@@ -198,6 +216,8 @@ export const FAHRZEUGE = [
   {
     id: 'krone_profi_liner_2600',
     name: 'KRONE Profi Liner · 2,60 m',
+    anzeige: 'Sattelauflieger · Standard · 2,60 m',
+    referenz: 'KRONE Profi Liner · Referenzkonfiguration',
     kategorie: 'sattel',
     aufbau: 'KRONE Profi Liner · Standard-Curtainsider, untere Höhenausprägung',
     l: 13620, b: 2480, h: 2600,
@@ -216,6 +236,8 @@ export const FAHRZEUGE = [
   {
     id: 'krone_profi_liner_2700',
     name: 'KRONE Profi Liner · 2,70 m',
+    anzeige: 'Sattelauflieger · Standard · 2,70 m',
+    referenz: 'KRONE Profi Liner · Referenzkonfiguration',
     kategorie: 'sattel',
     aufbau: 'KRONE Profi Liner · Standard-Curtainsider, obere Höhenausprägung',
     l: 13620, b: 2480, h: 2700,
@@ -234,6 +256,8 @@ export const FAHRZEUGE = [
   {
     id: 'krone_mega_liner_3000',
     name: 'KRONE Mega Liner · 3,00 m',
+    anzeige: 'Sattelauflieger · Mega · 3,00 m',
+    referenz: 'KRONE Mega Liner · Referenzkonfiguration',
     kategorie: 'sattel',
     aufbau: 'KRONE Mega Liner SDP 27 eLMG-CS · Mega-Curtainsider',
     l: 13620, b: 2480, h: 3000,
@@ -254,6 +278,8 @@ export const FAHRZEUGE = [
   {
     id: 'krone_wp73_ls5_cs',
     name: 'KRONE WP 7,3 · Wechselpritsche',
+    anzeige: 'Wechselpritsche · 7,28 m · Plane',
+    referenz: 'KRONE WP 7,3 LS5-CS',
     kategorie: 'wechsel',
     aufbau: 'KRONE WP 7,3 LS5-CS · Wechselpritsche mit Planenaufbau',
     l: 7280, b: 2480, h: 2390,
@@ -270,6 +296,8 @@ export const FAHRZEUGE = [
   {
     id: 'krone_wk73_stg',
     name: 'KRONE WK 7,3 · Wechselkoffer',
+    anzeige: 'Wechselkoffer · 7,30 m',
+    referenz: 'KRONE WK 7,3 STG',
     kategorie: 'wechsel',
     aufbau: 'KRONE WK 7,3 STG · Wechselkoffer / Dry Box',
     l: 7300, b: 2470, h: 2525,
@@ -289,6 +317,8 @@ export const FAHRZEUGE = [
   {
     id: 'frei',
     name: 'Freie Maße',
+    anzeige: 'Freie Fahrzeugmaße',
+    referenz: 'Eigene Innenmaße eingeben',
     kategorie: 'sonder',
     aufbau: 'Eigene Innenmaße eintragen',
     l: 13600, b: 2440, h: 3000,

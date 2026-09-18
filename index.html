@@ -46,8 +46,22 @@
         <span class="schritt">1</span>
         <h2>Fahrzeug</h2>
       </div>
-      <label class="lbl" for="fzg">Fahrzeugbibliothek</label>
-      <select id="fzg"></select>
+      <span class="lbl" id="fzgLabel">Fahrzeugbibliothek</span>
+      <div class="picker" id="fzgPicker">
+        <button type="button" class="picker-knopf" id="fzgKnopf"
+                aria-haspopup="listbox" aria-expanded="false" aria-controls="fzgListe" aria-labelledby="fzgLabel fzgKnopfPrimaer">
+          <span class="picker-wahl">
+            <span class="picker-primaer" id="fzgKnopfPrimaer"></span>
+            <span class="picker-sekundaer" id="fzgKnopfSekundaer"></span>
+          </span>
+          <span class="picker-pfeil" aria-hidden="true"></span>
+        </button>
+        <div class="picker-panel" id="fzgPanel" hidden>
+          <div class="picker-filter" id="fzgFilter" role="group" aria-label="Fahrzeugarten filtern"></div>
+          <ul class="picker-liste" id="fzgListe" role="listbox" aria-label="Fahrzeugvorlagen"></ul>
+          <div class="picker-fuss" id="fzgGesperrt"></div>
+        </div>
+      </div>
 
       <div class="fzg-karte" id="fzgKarte">
         <!-- Platzhalter für die später geplante einheitliche Silhouette; bleibt bis dahin aus -->

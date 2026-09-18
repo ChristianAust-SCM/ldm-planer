@@ -47,6 +47,9 @@ async function main() {
   const anfragen = []
   ctx.on('request', r => anfragen.push(r.url()))
   const page = await ctx.newPage()
+  /* Bestätigungsdialoge immer annehmen — einmalige Handler bleiben sonst liegen,
+     wenn die Aktion gar keinen Dialog auslöst */
+  page.on('dialog', d => d.accept().catch(() => {}))
   const fehlerKonsole = []
   page.on('pageerror', e => fehlerKonsole.push(String(e)))
   page.on('console', m => { if (m.type() === 'error') fehlerKonsole.push(m.text()) })
@@ -71,6 +74,11 @@ async function main() {
   const masseOeffnen = async () => {
     if (await page.locator('#masseBox').isHidden()) { await page.click('#btnMasse'); await warte(150) }
   }
+  const fahrzeugWaehlen = async id => {
+    if (await page.locator('#fzgPanel').isHidden()) { await page.click('#fzgKnopf'); await warte(150) }
+    await page.click(`#fzgListe .pz[data-id="${id}"]`)
+    await warte(200)
+  }
   const fahrzeugMasse = async (l, b, h, nutzlast = '') => {
     await masseOeffnen()
     await page.fill('#fL', String(l)); await page.fill('#fB', String(b)); await page.fill('#fH', String(h))
@@ -81,7 +89,6 @@ async function main() {
     if (!(await page.locator('#btnLeeren').isVisible())) {
       await page.click('#btnZurueckPlaner'); await warte(250)
     }
-    page.once('dialog', d => d.accept())
     await page.click('#btnLeeren'); await warte(200)
   }
 
@@ -320,31 +327,90 @@ async function main() {
       return zahl(m[1]) <= zahl(m[2]) + 0.001
     }), belegt.join(' | '))
 
-    /* ---------- P · Fahrzeugbibliothek ---------- */
-    console.log('\nP · Fahrzeugbibliothek')
+    /* ---------- P · Fahrzeug-Picker ---------- */
+    console.log('\nP · Fahrzeug-Picker')
     await leeren()
-    const gruppen = await page.evaluate(() => [...document.querySelectorAll('#fzg optgroup')].map(g => g.label))
-    pruefe('Kategorien statt langer Liste', gruppen.length >= 5, gruppen.join(' | '))
-    for (const k of ['Transporter & Express', 'LKW · Koffer & Plane', 'Sattelauflieger', 'Wechselsysteme', 'Sonderkonfiguration']) {
-      pruefe(`Kategorie „${k}"`, gruppen.includes(k), gruppen.join(' | '))
-    }
-    const optionen = await page.evaluate(() =>
-      [...document.querySelectorAll('#fzg option')].map(o => ({ v: o.value, t: o.textContent, aus: o.disabled })))
-    pruefe('14 Vorlagen plus freie Maße wählbar', optionen.filter(o => !o.aus).length === 15, String(optionen.filter(o => !o.aus).length))
-    pruefe('keine Dubletten in der Liste', new Set(optionen.map(o => o.t)).size === optionen.length)
-    pruefe('keine alten Vorlagen mehr', !optionen.some(o => ['mega', 'std', 'wb', 'custom'].includes(o.v)))
-    pruefe('kein Technoplan', !optionen.some(o => /technoplan/i.test(o.t)))
-    const jumbo = optionen.find(o => /Jumbo/i.test(o.t))
-    pruefe('Jumbo erwähnt, aber gesperrt', !!jumbo && jumbo.aus, JSON.stringify(jumbo))
-    pruefe('Jumbo nennt den Grund', !!jumbo && /zwei getrennte Ladeflächen/.test(jumbo.t))
+    pruefe('kein natives Dropdown mehr', await page.locator('#fzg').count() === 0)
+    pruefe('Picker geschlossen beim Start', await page.locator('#fzgPanel').isHidden())
+    pruefe('gewähltes Fahrzeug steht am Knopf', (await page.locator('#fzgKnopfPrimaer').textContent()).length > 3)
 
-    /* Jede Vorlage auswählbar, Maße werden übernommen */
+    await page.click('#fzgKnopf'); await warte(200)
+    pruefe('Picker öffnet', await page.locator('#fzgPanel').isVisible())
+    pruefe('Knopf meldet den offenen Zustand', await page.locator('#fzgKnopf').getAttribute('aria-expanded') === 'true')
+    pruefe('Liste ist eine Listbox', await page.locator('#fzgListe').getAttribute('role') === 'listbox')
+
+    const filter = await page.evaluate(() => [...document.querySelectorAll('#fzgFilter [data-filter]')].map(b => b.textContent))
+    pruefe('Schnellfilter vorhanden', filter.length === 6, filter.join(' | '))
+    for (const f of ['Alle', 'Transporter & Express', 'LKW', 'Sattelauflieger', 'Wechselsysteme', 'Sonderkonfiguration']) {
+      pruefe(`Filter „${f}"`, filter.includes(f), filter.join(' | '))
+    }
+    pruefe('„Nicht unterstützt" ist kein Filter', !filter.some(f => /nicht unterstützt/i.test(f)))
+
+    const zeilenIds = async () => page.evaluate(() => [...document.querySelectorAll('#fzgListe .pz')].map(li => li.dataset.id))
+    pruefe('Filter „Alle" zeigt alle 15 Einträge', (await zeilenIds()).length === 15, String((await zeilenIds()).length))
+
+    await page.click('[data-filter="transporter"]'); await warte(200)
+    const transporter = await zeilenIds()
+    pruefe('Transporter & Express filtert', transporter.length === 5, transporter.join(', '))
+    pruefe('Planensprinter stehen vorn', transporter.slice(0, 3).join(',') ===
+      'sprinter_schutz_m6_plane_2000,sprinter_schutz_ta6_plane_2000,sprinter_schutz_ta4_plane_2000', transporter.join(', '))
+    const ersteSichtbar = await page.evaluate(() => {
+      const li = document.querySelector('#fzgListe .pz'), box = document.getElementById('fzgListe').getBoundingClientRect()
+      const r = li.getBoundingClientRect()
+      return r.top >= box.top - 1 && r.bottom <= box.bottom + 1
+    })
+    pruefe('M6 ohne Scrollen sichtbar', ersteSichtbar)
+
+    for (const [f, anzahl] of [['lkw', 4], ['sattel', 3], ['wechsel', 2], ['sonder', 1]]) {
+      await page.click(`[data-filter="${f}"]`); await warte(150)
+      pruefe(`Filter ${f} zeigt ${anzahl}`, (await zeilenIds()).length === anzahl, (await zeilenIds()).join(', '))
+    }
+    await page.click('[data-filter="alle"]'); await warte(150)
+
+    /* Zeileninhalt */
+    const ta6 = await page.evaluate(() => {
+      const li = document.querySelector('.pz[data-id="sprinter_schutz_ta6_plane_2000"]')
+      return {
+        primaer: li.querySelector('.pz-primaer').textContent,
+        sekundaer: li.querySelector('.pz-sekundaer').textContent,
+        masse: li.querySelector('.pz-masse').textContent,
+        badges: [...li.querySelectorAll('.badge')].map(b => b.textContent)
+      }
+    })
+    pruefe('Primärname erklärt die Fahrzeugart', ta6.primaer === 'Planensprinter · 4,30 m · Tiefpritsche', ta6.primaer)
+    pruefe('Referenzname bleibt sichtbar', /Schutz TA6/.test(ta6.sekundaer), ta6.sekundaer)
+    pruefe('Maße in der Zeile', ta6.masse === '4.300 × 2.030 × 2.000 mm', ta6.masse)
+    pruefe('höchstens zwei Etiketten', ta6.badges.length <= 2 && ta6.badges.includes('Radkästen'), ta6.badges.join(', '))
+    const m6Badges = await page.evaluate(() =>
+      [...document.querySelectorAll('.pz[data-id="sprinter_schutz_m6_plane_2000"] .badge')].map(b => b.textContent))
+    pruefe('M6 ohne Radkasten-Etikett', !m6Badges.includes('Radkästen'), m6Badges.join(', '))
+
+    /* Jumbo bleibt Hinweis, keine Zeile */
+    const jumboZeile = await page.locator('#fzgListe .pz', { hasText: 'Jumbo' }).count()
+    pruefe('Jumbo ist keine Auswahlzeile', jumboZeile === 0)
+    const jumboText = await page.locator('#fzgGesperrt').textContent()
+    pruefe('Jumbo als Hinweis im Fuß', /Jumbo \/ Volumenzug/.test(jumboText) && /Noch nicht unterstützt/i.test(jumboText))
+    pruefe('Jumbo nennt den Grund', /zwei getrennte Ladeflächen/.test(jumboText))
+
+    /* Auswahl */
+    await page.click('.pz[data-id="sprinter_schutz_ta4_plane_2000"]'); await warte(250)
+    pruefe('Picker schließt nach der Auswahl', await page.locator('#fzgPanel').isHidden())
+    pruefe('Knopf zeigt den Primärnamen', (await page.locator('#fzgKnopfPrimaer').textContent()) === 'Planensprinter · 3,48 m · Tiefpritsche')
+    pruefe('Knopf zeigt die Referenz', /Schutz TA4/.test(await page.locator('#fzgKnopfSekundaer').textContent()))
+    await masseOeffnen()
+    pruefe('Maße übernommen', await page.inputValue('#fL') === '3480' && await page.inputValue('#fB') === '2030')
+    pruefe('Karte zeigt die technische Konfiguration', /Schutz Tiefpritsche Typ TA4/.test(await page.locator('#fzgName').textContent()))
+    pruefe('Karte wiederholt den Picker-Namen nicht', (await page.locator('#fzgName').textContent()) !== 'Planensprinter · 3,48 m · Tiefpritsche')
+    pruefe('Radkastenwarnung unverändert', /Radkästen vorhanden/.test(await page.locator('#fzgWarnung').textContent()))
+    pruefe('Richtwert unverändert', (await page.locator('#fzgStatus').textContent()).includes('Richtwert'))
+
+    /* Alle Vorlagen: Maße und Nutzlast unverändert */
     const erwartet = {
-      transit_l3h3_fwd_srw: [3533, 1784, 2125, ''],
-      transit_l4h3_rwd_awd: [4256, 1784, 2025, ''],
       sprinter_schutz_m6_plane_2000: [4300, 2030, 2000, ''],
       sprinter_schutz_ta6_plane_2000: [4300, 2030, 2000, ''],
       sprinter_schutz_ta4_plane_2000: [3480, 2030, 2000, ''],
+      transit_l3h3_fwd_srw: [3533, 1784, 2125, ''],
+      transit_l4h3_rwd_awd: [4256, 1784, 2025, ''],
       spier_aerobox_sprinter_35t: [4350, 2060, 2100, '940'],
       atego_818_spier_athlet_plus: [6050, 2496, 2396, ''],
       atego_1224_spier_athlet: [7200, 2496, 2369, ''],
@@ -355,68 +421,63 @@ async function main() {
       krone_wp73_ls5_cs: [7280, 2480, 2390, ''],
       krone_wk73_stg: [7300, 2470, 2525, '']
     }
-    let masseOk = 0, nutzlastLeer = 0
+    let massOk = 0, nutzlastLeer = 0
     for (const [id, [l, b, h, n]] of Object.entries(erwartet)) {
-      await page.selectOption('#fzg', id); await warte(120)
+      await fahrzeugWaehlen(id)
       await masseOeffnen()
       const ist = await page.evaluate(() => [
         document.getElementById('fL').value, document.getElementById('fB').value,
         document.getElementById('fH').value, document.getElementById('fN').value])
-      if (ist[0] === String(l) && ist[1] === String(b) && ist[2] === String(h) && ist[3] === n) masseOk++
+      if (ist.join('/') === [l, b, h, n].join('/')) massOk++
       else console.log(`      ${id}: erwartet ${l}/${b}/${h}/${n || '—'}, ist ${ist.join('/')}`)
       if (n === '' && ist[3] === '') nutzlastLeer++
     }
-    pruefe('alle 14 Vorlagen übernehmen ihre Maße', masseOk === 14, `${masseOk} von 14`)
+    pruefe('alle 14 Vorlagen übernehmen ihre Maße', massOk === 14, `${massOk} von 14`)
     pruefe('nicht belegte Nutzlast bleibt leer', nutzlastLeer === 10, `${nutzlastLeer} von 10`)
-
-    /* Fahrzeugkarte: Status, Radkästen, Quelle */
-    await page.selectOption('#fzg', 'sprinter_schutz_m6_plane_2000'); await warte(250)
-    pruefe('M6 als konkrete Vorlage gekennzeichnet', (await page.locator('#fzgStatus').textContent()).includes('Konkrete Vorlage'))
-    pruefe('M6 ohne Radkastenwarnung', !/Radkästen vorhanden/.test(await page.locator('#fzgWarnung').textContent()))
-    pruefe('M6 ohne Richtwert-Etikett', !/RICHTWERT/i.test(await page.locator('#fzgWarnung').textContent()))
-    pruefe('M6 nennt den ebenen Boden', /keine Radkästen/.test(await page.locator('#fzgMerkmale').textContent()))
-    pruefe('M6 Nutzlast nicht vorbelegt', /nicht vorbelegt/.test(await page.locator('#fzgNutzlast').textContent()))
+    await fahrzeugWaehlen('spier_aerobox_sprinter_35t')
+    pruefe('belegte Nutzlast unverändert', /940/.test(await page.locator('#fzgNutzlast').textContent()))
+    pruefe('Nutzlasthinweis unverändert', /dokumentierte/.test(await page.locator('#fzgNutzlast').textContent()))
+    pruefe('keine Palettenangabe', !/Palette/i.test(await page.locator('#fzgKarte').textContent()))
     await page.locator('#fzgQuelleBox summary').click(); await warte(200)
-    const q = await page.locator('#fzgQuelle').textContent()
-    pruefe('Quelle nennt Hersteller und Konfiguration', /Schutz/.test(q) && /Mittelhochpritsche/.test(q))
-    pruefe('keine langen URLs in der Oberfläche', !/https?:\/\//.test(await page.locator('#fahrzeugKarte').textContent()))
+    pruefe('Quelle unverändert auffindbar', /SPIER/.test(await page.locator('#fzgQuelle').textContent()))
+    pruefe('keine URLs in der Oberfläche', !/https?:\/\//.test(await page.locator('#fahrzeugKarte').textContent()))
 
-    for (const id of ['sprinter_schutz_ta6_plane_2000', 'sprinter_schutz_ta4_plane_2000']) {
-      await page.selectOption('#fzg', id); await warte(250)
-      const w = await page.locator('#fzgWarnung').textContent()
-      pruefe(`${id.includes('ta6') ? 'TA6' : 'TA4'}: Radkastenwarnung`, /Radkästen vorhanden/.test(w))
-      pruefe(`${id.includes('ta6') ? 'TA6' : 'TA4'}: Hinweis auf die Rechengrenze`, /berücksichtigt die Radkästen derzeit nicht/.test(w))
-      pruefe(`${id.includes('ta6') ? 'TA6' : 'TA4'}: als Richtwert gekennzeichnet`, (await page.locator('#fzgStatus').textContent()).includes('Richtwert'))
-    }
+    /* Freie Maße */
+    await fahrzeugWaehlen('frei')
+    pruefe('freie Maße heißen verständlich', (await page.locator('#fzgKnopfPrimaer').textContent()) === 'Freie Fahrzeugmaße')
+    pruefe('freie Maße öffnen die Felder', await page.locator('#masseBox').isVisible())
+    await fahrzeugMasse(9000, 2300, 2600, 5000)
+    pruefe('eigene Maße wirken', (await page.locator('#fzgMasse').textContent()).includes('9.000'))
 
-    await page.selectOption('#fzg', 'spier_aerobox_sprinter_35t'); await warte(250)
-    pruefe('belegte Nutzlast wird übernommen', /940/.test(await page.locator('#fzgNutzlast').textContent()))
-    pruefe('Nutzlast trägt ihren Gültigkeitshinweis', /dokumentierte/.test(await page.locator('#fzgNutzlast').textContent()))
-    pruefe('keine Palettenangabe in der Karte', !/Palette/i.test(await page.locator('#fzgKarte').textContent()))
+    /* Tastatur */
+    console.log('\nP2 · Tastatur und Schließen')
+    await page.locator('#fzgKnopf').focus()
+    await page.keyboard.press('Enter'); await warte(200)
+    pruefe('Enter öffnet den Picker', await page.locator('#fzgPanel').isVisible())
+    pruefe('Fokus liegt in der Liste', await page.evaluate(() => !!document.activeElement.closest('#fzgListe')))
+    await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown'); await warte(120)
+    const aktiv = await page.evaluate(() => document.activeElement.dataset.id)
+    pruefe('Pfeiltasten bewegen die Auswahl', !!aktiv, String(aktiv))
+    await page.keyboard.press('Home'); await warte(100)
+    pruefe('Home springt zum ersten Eintrag', await page.evaluate(() => document.activeElement === document.querySelector('#fzgListe .pz')))
+    await page.keyboard.press('End'); await warte(100)
+    pruefe('End springt zum letzten Eintrag', await page.evaluate(() => {
+      const alle = [...document.querySelectorAll('#fzgListe .pz')]
+      return document.activeElement === alle[alle.length - 1]
+    }))
+    await page.keyboard.press('Enter'); await warte(250)
+    pruefe('Enter wählt aus und schließt', await page.locator('#fzgPanel').isHidden())
+    pruefe('Fokus kehrt zum Knopf zurück', await page.evaluate(() => document.activeElement.id === 'fzgKnopf'))
 
-    /* Freie Maße und eigene Werte */
-    await page.selectOption('#fzg', 'frei'); await warte(250)
-    pruefe('Freie Maße öffnet die Felder', await page.locator('#masseBox').isVisible())
-    await fahrzeugMasse(9999, 2100, 2500, 7000)
-    pruefe('eigene Maße werden übernommen', (await page.locator('#fzgMasse').textContent()).includes('9.999'))
-    pruefe('eigene Nutzlast wird übernommen', /7\.000/.test(await page.locator('#fzgNutzlast').textContent()))
-    pruefe('Auswahl bleibt auf freien Maßen', await page.locator('#fzg').inputValue() === 'frei')
+    await page.keyboard.press('ArrowDown'); await warte(200)
+    pruefe('Pfeil nach unten öffnet', await page.locator('#fzgPanel').isVisible())
+    await page.keyboard.press('Escape'); await warte(200)
+    pruefe('Escape schließt', await page.locator('#fzgPanel').isHidden())
+    pruefe('Escape gibt den Fokus zurück', await page.evaluate(() => document.activeElement.id === 'fzgKnopf'))
 
-    /* Maße einer Vorlage ändern: Vorlage bleibt erhalten, Abweichung wird benannt */
-    await page.selectOption('#fzg', 'krone_mega_liner_3000'); await warte(200)
-    await masseOeffnen()
-    await page.fill('#fH', '2900'); await page.locator('#fH').blur(); await warte(250)
-    pruefe('geänderte Maße wirken', (await page.locator('#fzgMasse').textContent()).includes('2.900'))
-    pruefe('Auswahl springt auf freie Maße', await page.locator('#fzg').inputValue() === 'frei')
-    pruefe('Karte zeigt dann keine Herstellerquelle mehr', await page.locator('#fzgQuelleBox').isHidden())
-    pruefe('Status wechselt auf eigene Maße', (await page.locator('#fzgStatus').textContent()).includes('Eigene Maße'))
-
-    /* Vorlage wirkt auf die Rechnung */
-    await page.selectOption('#fzg', 'sprinter_schutz_ta4_plane_2000'); await warte(200)
-    await manuell('Palette', 1200, 800, 1000, 300, 6, 1)
-    await page.click('#btnRechnen'); await warte(400)
-    pruefe('Vorlage wirkt im Ladeplan', /3,48 m Ladelänge|3,48/.test(await page.locator('#plaene').textContent()),
-      (await page.locator('#plaene').textContent()).slice(0, 120))
+    await page.click('#fzgKnopf'); await warte(200)
+    await page.click('#sendungKarte h2'); await warte(250)
+    pruefe('Klick außerhalb schließt', await page.locator('#fzgPanel').isHidden())
 
     /* ---------- L · Druckansicht ---------- */
     console.log('\nL · Druckansicht')
@@ -461,7 +522,6 @@ async function main() {
 
     /* ---------- Zurücksetzen ---------- */
     console.log('\nZurücksetzen')
-    page.once('dialog', d => d.accept())
     await page.click('#btnStammdaten'); await warte(200)
     await page.click('#btnReset'); await warte(400)
     pruefe('Bestand geleert', /Noch keine Stammdaten/.test(await page.locator('#stammMeta').textContent()))
