@@ -1,6 +1,6 @@
 # LAB 01 · LDM Planer — Architektur
 
-Stand: 2026-09-18 · Status: **V1.1 mit Fahrzeugbibliothek und CA-Silhouetten, Tests grün**
+Stand: 2026-09-18 · Status: **V1.1 abgenommen, produktiv, Tests grün**
 
 ## Zweck
 

@@ -5,6 +5,27 @@ Lademeter- und Ladungsplanung direkt im Browser.
 **https://ldm.christianaust.eu** — Teil der persönlichen Ideenschmiede auf
 [christianaust.eu](https://christianaust.eu).
 
+## Stand
+
+**V1.1 · abgenommen am 18.09.2026** · produktiv unter https://ldm.christianaust.eu
+
+- **Fahrzeugbibliothek mit 15 Einträgen:** 14 recherchierte reale Konfigurationen
+  plus freie Maße. Die drei Planensprinter M6, TA6 und TA4 bilden eine eigene,
+  vorangestellte Klasse. Herkunft und Quellen je Vorlage:
+  [docs/FAHRZEUGVORLAGEN.md](docs/FAHRZEUGVORLAGEN.md).
+- **Eigene, markenneutrale Fahrzeugsilhouetten** unter `assets/vehicles/` — keine
+  Herstellerbilder, keine Nachbildung konkreter Modelle.
+- **Manuelle Ladungserfassung** ohne jede Vorbereitung; Stammdaten sind optional
+  und lassen sich aus Excel (.xlsx) oder CSV importieren.
+- **Ladeplan je Fahrzeug** mit Draufsicht, Seitenansicht, Rechenweg und
+  Stapelfaktorvergleich.
+- **Zwei Kennzahlen:** benötigte Ladelänge des erzeugten Plans und klassische
+  LDM-Kennzahl (belegte Grundfläche ÷ 2,40 m).
+- **Nutzlastprüfung**, sobald eine Nutzlast hinterlegt ist — vorbelegt nur dort,
+  wo der Hersteller sie für die konkrete Konfiguration belegt.
+- **Lokale Verarbeitung im Browser**, keine Datenübertragung, keine
+  Laufzeitabhängigkeiten.
+
 ## Was es tut
 
 Fahrzeug wählen, Ladung erfassen, Ladeplan rechnen:
@@ -41,6 +62,18 @@ Siehe [docs/DATENSCHUTZ.md](docs/DATENSCHUTZ.md).
 **Stammdaten sind optional.** Sie liegen in einer eigenen Ansicht und lassen sich
 manuell pflegen, aus Excel (.xlsx) oder CSV importieren, exportieren und
 vollständig zurücksetzen — nötig sind sie für keinen Schritt.
+
+## Bekannte Grenzen
+
+- **Radkästen der Tiefpritschen TA4 und TA6** sind nicht rechnerisch modelliert.
+  Ihre Geometrie ist nicht veröffentlicht; die Ladefläche wird rechteckig
+  gerechnet, und die Fahrzeugkarte weist darauf hin.
+- **Jumbo- und Gliederzüge** werden nicht unterstützt: Motorwagen und Anhänger
+  sind zwei getrennte Ladeflächen, die Engine kennt nur eine. Sie erscheinen in
+  der Bibliothek als nicht wählbarer Hinweis statt als Fantasiefahrzeug.
+- Keine Achslastberechnung und keine gewichtsbasierte Reihenoptimierung; die
+  übrigen bewussten Vereinfachungen stehen in
+  [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md).
 
 ## Hinweis
 
