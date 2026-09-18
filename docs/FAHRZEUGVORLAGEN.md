@@ -55,6 +55,35 @@ in der Oberfläche.
 | Technoplan Plane/Spriegel | Im finalen Report verworfen: Höhenangaben sind Bauhöhen, keine lichten Innenmaße, und Ladeflächen variieren mit Radstand und Antrieb. |
 | Palettenplätze der Planensprinter | Geometrisch wären es sechs bzw. acht Europaletten, doch kein Hersteller bestätigt das, und Radkästen, Rungen und Verschlüsse stören. |
 
+## Silhouetten
+
+Die Piktogramme unter `assets/vehicles/` sind **eigene, markenneutrale
+Zeichnungen** — keine Nachbildung konkreter Modelle, keine Herstellermerkmale,
+keine Fremdassets. Sieben Grundtypen decken alle Vorlagen ab; die Zuordnung
+steht in `data/silhouetten.js`, getrennt von den Fachdaten.
+
+| Grundtyp | Datei | Vorlagen |
+|---|---|---|
+| Kastenwagen | `van.svg` | Ford Transit L3H3, L4H3 |
+| Transporter mit Planenaufbau | `curtain-van.svg` | Planensprinter M6, TA6, TA4 |
+| Koffer-LKW | `box-truck.svg` | SPIER Aerobox, Atego 818, Atego 1224, MAN TGM |
+| Sattelauflieger | `curtainsider.svg` | Profi Liner 2,60 m und 2,70 m |
+| Mega-Sattelauflieger | `mega-trailer.svg` | Mega Liner |
+| Wechselsystem | `swap-body.svg` | WP 7,3, WK 7,3 |
+| Freie Ladefläche | `generic.svg` | Freie Maße |
+
+Gemeinsames Raster `0 0 160 100`, Fahrerhaus links, Ladung rechts — wie in den
+Ladeplan-Grafiken der App. Navy trägt die Struktur, Silber die Flächen, Orange
+markiert ausschließlich die Ladefläche. Kein Text, keine Rasterdaten, keine
+externen Referenzen; die Dateien sind `role="presentation"` und werden
+dekorativ mit `alt=""` und `aria-hidden` eingebunden.
+
+**Bewusst nicht gezeichnet:** die Radkastengeometrie der Tiefpritschen TA4/TA6.
+Sie ist nicht veröffentlicht — die Illustration würde sie sonst vortäuschen. Der
+Textstatus „Radkästen vorhanden" bleibt die fachliche Information. Ebenso hat
+der Jumbo-/Volumenzug keine Silhouette, weil er nicht als eine Ladefläche
+modellierbar ist.
+
 ## Migration aus der ersten Fassung
 
 | alte Vorlage | Nachfolger |
@@ -73,5 +102,3 @@ Passen die Maße zu keiner Vorlage, steht die Auswahl auf „Freie Maße".
 - Radkastengeometrie der Tiefpritschen TA4/TA6 ist nicht veröffentlicht; die
   rechteckige Ladeflächenrechnung bildet sie deshalb nicht ab.
 - Jumbo-/Gliederzüge brauchen zwei Ladeflächen mit gemeinsamer Nutzlast.
-- Eigene, markenneutrale Fahrzeugsilhouetten; das Feld dafür ist in der
-  Fahrzeugkarte bereits vorgesehen.

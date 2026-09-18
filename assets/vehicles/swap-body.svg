@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" role="presentation" focusable="false">
+<!--
+  CA-Fahrzeugsilhouette · Wechselsystem
+  Eigenzeichnung, markenneutral: keine Nachbildung eines konkreten Modells,
+  keine Herstellermerkmale. Navy trägt die Struktur, Silber die Flächen,
+  Orange markiert ausschließlich die Ladefläche.
+  Gemeinsames Raster aller Typen: Kabine links, Ladung rechts, Radaufstand y≈88.
+-->
+<g fill="none" stroke="#0D1B2A" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+  <!-- Die Ladeeinheit selbst: freistehender Aufbau auf vier Stützbeinen, keine Achsen -->
+  <path d="M20 66 V24 a3 3 0 0 1 3-3 H137 a3 3 0 0 1 3 3 V66 Z" fill="#EAEEF2"/>
+  <path d="M50 23 V64 M80 23 V64 M110 23 V64" stroke-width="1.6"/>
+  <path d="M16 66 H144 V72 H16 Z" fill="#C2CCD6"/>
+  <path d="M26 66 H134" stroke="#E87722" stroke-width="2.6"/>
+  <path d="M28 72 V86 M46 72 V86 M114 72 V86 M132 72 V86" stroke-width="2.4"/>
+  <path d="M22 86 H52 M108 86 H138" stroke-width="2.4"/>
+</g>
+</svg>

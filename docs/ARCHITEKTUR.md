@@ -1,6 +1,6 @@
 # LAB 01 · LDM Planer — Architektur
 
-Stand: 2026-09-18 · Status: **V1.1 mit Fahrzeugbibliothek, Tests grün**
+Stand: 2026-09-18 · Status: **V1.1 mit Fahrzeugbibliothek und CA-Silhouetten, Tests grün**
 
 ## Zweck
 
@@ -53,6 +53,8 @@ js/help.js                 Erklärungen an Ort und Stelle
 js/format.js               Zahlformate und kleine Helfer
 data/beispieldaten.js      neutrale Beispiel-Ladungsträger
 data/fahrzeuge.js          recherchierte Fahrzeugbibliothek (siehe FAHRZEUGVORLAGEN.md)
+data/silhouetten.js        Zuordnung Vorlage → CA-Silhouette
+assets/vehicles/           eigene, markenneutrale Fahrzeugpiktogramme (SVG)
 data/import-vorlage.csv    Vorlage für den CSV-Import
 tests/                     node:test (Logik) und browser.mjs (Playwright)
 docs/                      diese Dokumente

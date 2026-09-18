@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" role="presentation" focusable="false">
+<!--
+  CA-Fahrzeugsilhouette · Koffer-LKW
+  Eigenzeichnung, markenneutral: keine Nachbildung eines konkreten Modells,
+  keine Herstellermerkmale. Navy trägt die Struktur, Silber die Flächen,
+  Orange markiert ausschließlich die Ladefläche.
+  Gemeinsames Raster aller Typen: Kabine links, Ladung rechts, Radaufstand y≈88.
+-->
+<g fill="none" stroke="#0D1B2A" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+  <!-- Verteilerfahrerhaus, dahinter geschlossener Kofferaufbau über dem Rahmen -->
+  <path d="M10 70 V44 L22 30 H44 V70 a4 4 0 0 1-4 4 H14 a4 4 0 0 1-4-4 Z" fill="#EAEEF2"/>
+  <path d="M24 35 H38 V48 H14 Z" fill="#C2CCD6" stroke-width="2"/>
+  <path d="M48 66 V22 a3 3 0 0 1 3-3 H150 a3 3 0 0 1 3 3 V66 Z" fill="#EAEEF2"/>
+  <path d="M138 21 V64" stroke-width="1.8"/>
+  <path d="M44 66 H156 V71 H44 Z" fill="#C2CCD6"/>
+  <path d="M54 64 H148" stroke="#E87722" stroke-width="2.6"/>
+  <circle cx="32" cy="78" r="11.5" fill="#EAEEF2"/>
+  <circle cx="32" cy="78" r="4.2" fill="#C2CCD6" stroke-width="2"/>
+  <circle cx="126" cy="78" r="11.5" fill="#EAEEF2"/>
+  <circle cx="126" cy="78" r="4.2" fill="#C2CCD6" stroke-width="2"/>
+</g>
+</svg>

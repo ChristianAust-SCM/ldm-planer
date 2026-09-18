@@ -16,6 +16,7 @@ import * as R from './render-result.js'
 import { verbinde as hilfeVerbinden } from './help.js'
 import { BEISPIEL_LADUNGSTRAEGER } from '../data/beispieldaten.js'
 import { FAHRZEUGE, KATEGORIEN, NICHT_UNTERSTUETZT, ALTE_IDS, fahrzeugOf } from '../data/fahrzeuge.js'
+import { silhouetteFuer } from '../data/silhouetten.js'
 
 const $ = id => document.getElementById(id)
 
@@ -141,8 +142,7 @@ function zeichnePickerListe() {
     if (f.radkaesten === true) status.push('<span class="badge badge-radkasten">Radkästen</span>')
     return `<li role="option" class="pz" data-id="${esc(f.id)}" tabindex="-1"
         aria-selected="${f.id === fahrzeug.typ}">
-      <!-- Platz für die später geplanten eigenen Silhouetten -->
-      <span class="pz-bild" hidden aria-hidden="true"></span>
+      <img class="pz-bild" src="${esc(silhouetteFuer(f.id))}" alt="" aria-hidden="true" width="46" height="29">
       <span class="pz-text">
         <span class="pz-primaer">${esc(f.anzeige)}</span>
         <span class="pz-sekundaer">${esc(f.referenz)}</span>
@@ -157,6 +157,7 @@ function zeichnePickerKnopf() {
   const f = fahrzeugOf(fahrzeug.typ) || fahrzeugOf('frei')
   $('fzgKnopfPrimaer').textContent = f.anzeige
   $('fzgKnopfSekundaer').textContent = f.referenz
+  $('fzgKnopfBild').src = silhouetteFuer(f.id)
 }
 
 function pickerAuf() {
@@ -274,6 +275,7 @@ function zeichneFahrzeugKarte() {
 
   /* Der Picker trägt den nutzerorientierten Namen — die Karte den technischen */
   $('fzgName').textContent = f.aufbau
+  $('fzgBild').src = silhouetteFuer(f.id)
   $('fzgKat').textContent = kat ? kat.name : ''
   $('fzgStatus').textContent = STATUS_TEXT[f.status] || ''
   $('fzgStatus').className = 'badge ' + (f.status === 'richtwert' ? 'badge-richtwert' : f.status === 'frei' ? 'badge-frei' : 'badge-konkret')

@@ -46,6 +46,8 @@ async function main() {
   const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 } })
   const anfragen = []
   ctx.on('request', r => anfragen.push(r.url()))
+  const fehlendeAssets = []
+  ctx.on('response', r => { if (r.status() >= 400) fehlendeAssets.push(`${r.status()} ${r.url()}`) })
   const page = await ctx.newPage()
   /* Bestätigungsdialoge immer annehmen — einmalige Handler bleiben sonst liegen,
      wenn die Aktion gar keinen Dialog auslöst */
@@ -479,6 +481,54 @@ async function main() {
     await page.click('#sendungKarte h2'); await warte(250)
     pruefe('Klick außerhalb schließt', await page.locator('#fzgPanel').isHidden())
 
+    /* ---------- Q · CA-Fahrzeugsilhouetten ---------- */
+    console.log('\nQ · Fahrzeugsilhouetten')
+    if (await page.locator('#fzgPanel').isHidden()) { await page.click('#fzgKnopf'); await warte(200) }
+    await page.click('[data-filter="alle"]'); await warte(200)
+
+    const bilder = await page.evaluate(() => [...document.querySelectorAll('#fzgListe .pz')].map(li => ({
+      id: li.dataset.id,
+      quelle: li.querySelector('.pz-bild')?.getAttribute('src') || null,
+      alt: li.querySelector('.pz-bild')?.getAttribute('alt'),
+      versteckt: li.querySelector('.pz-bild')?.getAttribute('aria-hidden')
+    })))
+    pruefe('jede Zeile trägt eine Silhouette', bilder.every(b => b.quelle), JSON.stringify(bilder.find(b => !b.quelle)))
+    pruefe('alle Silhouetten sind lokal', bilder.every(b => b.quelle.startsWith('assets/vehicles/')))
+    pruefe('Silhouetten sind dekorativ ausgezeichnet', bilder.every(b => b.alt === '' && b.versteckt === 'true'))
+
+    const typ = id => (bilder.find(b => b.id === id) || {}).quelle
+    pruefe('M6 → Planensprinter-Silhouette', typ('sprinter_schutz_m6_plane_2000') === 'assets/vehicles/curtain-van.svg', typ('sprinter_schutz_m6_plane_2000'))
+    pruefe('TA6 → Planensprinter-Silhouette', typ('sprinter_schutz_ta6_plane_2000') === 'assets/vehicles/curtain-van.svg')
+    pruefe('TA4 → Planensprinter-Silhouette', typ('sprinter_schutz_ta4_plane_2000') === 'assets/vehicles/curtain-van.svg')
+    pruefe('Transit → Kastenwagen', typ('transit_l3h3_fwd_srw') === 'assets/vehicles/van.svg')
+    pruefe('Koffer → Koffer-LKW', typ('atego_818_spier_athlet_plus') === 'assets/vehicles/box-truck.svg')
+    pruefe('Profi Liner → Curtainsider', typ('krone_profi_liner_2700') === 'assets/vehicles/curtainsider.svg')
+    pruefe('Mega Liner → Mega', typ('krone_mega_liner_3000') === 'assets/vehicles/mega-trailer.svg')
+    pruefe('Wechselaufbau → Wechselsystem', typ('krone_wp73_ls5_cs') === 'assets/vehicles/swap-body.svg')
+    pruefe('freie Maße → neutrale Ladefläche', typ('frei') === 'assets/vehicles/generic.svg')
+    pruefe('Planensprinter und Kastenwagen unterscheiden sich', typ('sprinter_schutz_m6_plane_2000') !== typ('transit_l3h3_fwd_srw'))
+    pruefe('Standard und Mega unterscheiden sich', typ('krone_profi_liner_2700') !== typ('krone_mega_liner_3000'))
+    pruefe('Jumbo hat keine Silhouette', !(await page.locator('#fzgGesperrt img').count()))
+
+    const geladen = await page.evaluate(async () => {
+      const bilder = [...document.querySelectorAll('#fzgListe .pz-bild')]
+      await Promise.all(bilder.map(b => b.complete ? null : new Promise(r => { b.onload = r; b.onerror = r })))
+      return bilder.every(b => b.naturalWidth > 0)
+    })
+    pruefe('alle Silhouetten laden fehlerfrei', geladen)
+
+    /* Wechsel aktualisiert Knopf und Karte */
+    await page.click('.pz[data-id="krone_mega_liner_3000"]'); await warte(300)
+    pruefe('Knopf zeigt die Silhouette', (await page.getAttribute('#fzgKnopfBild', 'src')) === 'assets/vehicles/mega-trailer.svg')
+    pruefe('Karte zeigt die Silhouette', (await page.getAttribute('#fzgBild', 'src')) === 'assets/vehicles/mega-trailer.svg')
+    await fahrzeugWaehlen('sprinter_schutz_ta4_plane_2000')
+    pruefe('Wechsel aktualisiert den Knopf', (await page.getAttribute('#fzgKnopfBild', 'src')) === 'assets/vehicles/curtain-van.svg')
+    pruefe('Wechsel aktualisiert die Karte', (await page.getAttribute('#fzgBild', 'src')) === 'assets/vehicles/curtain-van.svg')
+    pruefe('Karte bleibt kompakt', await page.locator('#fzgKarte').evaluate(el => el.getBoundingClientRect().height < 420))
+    pruefe('Radkastenhinweis weiterhin als Text', /Radkästen vorhanden/.test(await page.locator('#fzgWarnung').textContent()))
+
+    pruefe('keine fehlenden Assets', fehlendeAssets.length === 0, fehlendeAssets.slice(0, 3).join(' | '))
+
     /* ---------- L · Druckansicht ---------- */
     console.log('\nL · Druckansicht')
     /* Die Abschnitte N und O enden bereits im Planer — hier steht eine Sendung mit Ladeplan */
@@ -512,6 +562,15 @@ async function main() {
         `${ueber.zuviel}px über: ${ueber.schuldige.join(', ')}`)
       pruefe(`${name}: Hauptaktion sichtbar`, await page.locator('#btnRechnen').isVisible())
       pruefe(`${name}: Erfassung bedienbar`, await page.locator('#mBez').isVisible() || await page.locator('#qNr').isVisible())
+      const pickerHoehe = await page.evaluate(async () => {
+        const knopf = document.getElementById('fzgKnopf')
+        knopf.click()
+        await new Promise(r => setTimeout(r, 150))
+        const h = document.getElementById('fzgPanel').getBoundingClientRect().height / window.innerHeight
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+        return Math.round(h * 100)
+      })
+      pruefe(`${name}: Picker bleibt kompakt (${pickerHoehe} %)`, pickerHoehe <= 65)
     }
     const hinweisSichtbar = await page.evaluate(() => {
       const h = [...document.querySelectorAll('.scrollhinweis')]
@@ -532,7 +591,7 @@ async function main() {
     console.log('\nDatenschutz')
     const fremd = anfragen.filter(u => !u.startsWith(BASIS))
     pruefe('keine Fremdanfragen', fremd.length === 0, fremd.join(', '))
-    const nichtStatisch = anfragen.filter(u => u.startsWith(BASIS) && !/\.(html|css|js|png|ico|json|csv|xlsx)(\?|$)|\/$/.test(u))
+    const nichtStatisch = anfragen.filter(u => u.startsWith(BASIS) && !/\.(html|css|js|svg|png|ico|json|csv|xlsx)(\?|$)|\/$/.test(u))
     pruefe('nur statische Dateien geladen', nichtStatisch.length === 0, nichtStatisch.join(', '))
     pruefe('keine Konsolenfehler', fehlerKonsole.length === 0, fehlerKonsole.slice(0, 3).join(' | '))
 
