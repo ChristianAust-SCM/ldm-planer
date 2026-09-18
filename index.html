@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LAB 01 · LDM Planer</title>
-<meta name="description" content="Lademeter- und Ladungsplanung direkt im Browser. Ladungsträger erfassen, Ladeplan rechnen, Auslastung sehen – alle Daten bleiben lokal.">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0B1622">
+<meta name="description" content="Lademeter- und Ladungsplanung direkt im Browser. Fahrzeug wählen, Ladung erfassen, Ladeplan rechnen – alle Daten bleiben lokal.">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#0D1B2A">
 <link rel="icon" href="assets/logo/ca-favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/logo/ca-favicon-180.png">
 <link rel="stylesheet" href="assets/css/app.css">
@@ -16,7 +16,7 @@
 <header>
   <div class="wrap hdr">
     <div class="marke">
-      <img class="signet" src="assets/logo/ca-signet-dark.png" alt="" width="40" height="40">
+      <img class="signet" src="assets/logo/ca-signet-dark.png" alt="" width="38" height="38">
       <div>
         <p class="lab">Lab 01</p>
         <h1>LDM Planer</h1>
@@ -25,159 +25,216 @@
     </div>
     <div class="hdr-akt noprint">
       <a class="zurueck" href="https://christianaust.eu/">&#8592; Ideenschmiede</a>
-      <button class="btn" id="btnDrucken">Ladeplan drucken</button>
+      <button class="btn-geist" id="btnStammdaten">Stammdaten verwalten</button>
+      <button class="btn-geist" id="btnDrucken">Drucken</button>
     </div>
   </div>
 </header>
 
-<nav class="wrap noprint" aria-label="Arbeitsschritte">
-  <div class="steps" role="tablist">
-    <button class="step" id="tab-stammdaten" role="tab" aria-selected="false" aria-controls="view-stammdaten">
-      <span class="nr">1</span><span class="nm">Stammdaten</span><span class="meta" id="tab-stammdaten-meta">leer</span></button>
-    <button class="step" id="tab-sendung" role="tab" aria-selected="false" aria-controls="view-sendung">
-      <span class="nr">2</span><span class="nm">Sendung</span><span class="meta" id="tab-sendung-meta">leer</span></button>
-    <button class="step" id="tab-ladeplan" role="tab" aria-selected="false" aria-controls="view-ladeplan">
-      <span class="nr">3</span><span class="nm">Ladeplan</span><span class="meta" id="tab-ladeplan-meta">–</span></button>
-  </div>
-</nav>
-
 <main class="wrap">
 <p id="speicherHinweis" class="msg" hidden></p>
 
-<!-- ====================== 1 · STAMMDATEN ====================== -->
-<section id="view-stammdaten" role="tabpanel" aria-labelledby="tab-stammdaten" hidden>
+<!-- ====================== ARBEITSOBERFLÄCHE ====================== -->
+<section id="view-planer">
+<div class="arbeit">
 
-  <div class="card">
-    <h2>Ladungsträger</h2>
-    <p class="sub" id="stammMeta">Noch keine Stammdaten.</p>
-    <div class="aktionen noprint">
+  <!-- -------- Linke Spalte: erfassen -------- -->
+  <div class="spalte-eingabe">
+
+    <section class="card" id="fahrzeugKarte">
+      <div class="karte-kopf">
+        <span class="schritt">1</span>
+        <h2>Fahrzeug</h2>
+      </div>
+      <label class="lbl" for="fzg">Vorlage</label>
+      <select id="fzg"></select>
+      <div class="masse">
+        <div><label class="lbl" for="fL">Innenlänge mm</label><input type="number" id="fL" min="0" inputmode="numeric"></div>
+        <div><label class="lbl" for="fB">Innenbreite mm</label><input type="number" id="fB" min="0" inputmode="numeric"></div>
+        <div><label class="lbl" for="fH">Innenhöhe mm</label><input type="number" id="fH" min="0" inputmode="numeric"></div>
+        <div><label class="lbl" for="fN">Nutzlast kg <span class="opt">optional</span></label><input type="number" id="fN" min="0" inputmode="numeric" placeholder="z. B. 24000"></div>
+      </div>
+      <p class="fuss">Richtwerte — Innenmaße des tatsächlich eingesetzten Fahrzeugs prüfen. <span id="fLDMText"></span></p>
+    </section>
+
+    <section class="card" id="erfassenKarte">
+      <div class="karte-kopf">
+        <span class="schritt">2</span>
+        <h2>Ladung erfassen</h2>
+      </div>
+
+      <div class="reiter noprint" role="tablist">
+        <button class="reiter-btn on" id="tab-manuell" role="tab" aria-selected="true">Manuell eingeben</button>
+        <button class="reiter-btn" id="tab-stamm" role="tab" aria-selected="false">Aus Stammdaten</button>
+      </div>
+
+      <!-- Manuell -->
+      <div id="form-manuell">
+        <div class="feldsatz">
+          <div class="f-breit">
+            <label class="lbl" for="mBez">Bezeichnung</label>
+            <input id="mBez" placeholder="z. B. Gitterbox" autocomplete="off">
+          </div>
+          <div class="f-breit-mobil">
+            <label class="lbl" for="mId">ID <span class="opt">optional</span></label>
+            <input id="mId" placeholder="z. B. GB-01" autocomplete="off">
+          </div>
+          <div><label class="lbl" for="mL">Länge mm</label><input type="number" id="mL" min="1" inputmode="numeric" placeholder="1200"></div>
+          <div><label class="lbl" for="mB">Breite mm</label><input type="number" id="mB" min="1" inputmode="numeric" placeholder="800"></div>
+          <div><label class="lbl" for="mH">Höhe mm</label><input type="number" id="mH" min="1" inputmode="numeric" placeholder="1000"></div>
+          <div><label class="lbl" for="mG">Gewicht kg <span class="opt">optional</span></label><input type="number" id="mG" min="0" step="0.1" inputmode="decimal" placeholder="—"></div>
+          <div><label class="lbl" for="mMenge">Menge</label><input type="number" id="mMenge" min="1" value="1" inputmode="numeric"></div>
+          <div><label class="lbl" for="mStapel">Stapel max.<button type="button" class="hlp noprint" data-hlp="stapel" aria-label="Erklärung"></button></label><input type="number" id="mStapel" min="1" max="20" value="1" inputmode="numeric"></div>
+        </div>
+        <div class="zeile-akt">
+          <button class="btn" id="btnManuellAdd">+ Zur Sendung hinzufügen</button>
+          <label class="merken noprint"><input type="checkbox" id="mMerken"> auch in Stammdaten speichern</label>
+        </div>
+        <p id="manuellMsg" class="msg" hidden></p>
+      </div>
+
+      <!-- Aus Stammdaten -->
+      <div id="form-stamm" hidden>
+        <div id="stammLeer" class="leerhinweis" hidden>
+          Noch keine Stammdaten hinterlegt. Das ist keine Voraussetzung — manuell erfassen geht sofort.
+          <button class="btn-sec" id="btnBeispielSchnell">Beispieldaten laden</button>
+        </div>
+        <div id="stammSuche">
+          <label class="lbl" for="qNr">Suchen · ID, Bezeichnung oder Maß<button type="button" class="hlp noprint" data-hlp="nummer" aria-label="Erklärung"></button></label>
+          <input id="qNr" placeholder="z. B. GB-01, Gitterbox oder 1200x800" autocomplete="off">
+          <div class="qehint" id="qHint"></div>
+          <div class="feldsatz schmal">
+            <div><label class="lbl" for="qMenge">Menge</label><input type="number" id="qMenge" min="1" value="1" inputmode="numeric"></div>
+            <div><label class="lbl" for="qStapel">Stapel max.</label><input type="number" id="qStapel" min="1" max="20" inputmode="numeric"></div>
+          </div>
+          <div class="zeile-akt">
+            <button class="btn" id="btnQeAdd">+ Zur Sendung hinzufügen</button>
+          </div>
+          <p id="qMsg" class="msg" hidden></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="sendungKarte">
+      <div class="karte-kopf">
+        <span class="schritt">3</span>
+        <h2>Sendung</h2>
+        <span class="karte-meta" id="sendungMeta"></span>
+      </div>
+      <div class="tscroll" data-scrollhinweis>
+        <table id="posTable">
+          <thead><tr>
+            <th class="num">Pos.</th><th>ID</th><th>Bezeichnung</th><th>L × B × H mm</th>
+            <th class="num">kg</th><th class="num">Menge</th>
+            <th class="num">Stapel<button type="button" class="hlp noprint" data-hlp="stapel" aria-label="Erklärung"></button></th>
+            <th class="num">Stellpl.<button type="button" class="hlp noprint" data-hlp="stellplatz" aria-label="Erklärung"></button></th>
+            <th class="noprint"></th>
+          </tr></thead>
+          <tbody id="posBody"></tbody>
+        </table>
+      </div>
+      <div class="zeile-akt noprint">
+        <button class="btn-sec gefahr" id="btnLeeren">Sendung leeren</button>
+      </div>
+      <button class="btn-haupt noprint" id="btnRechnen">Ladeplan berechnen</button>
+      <p id="rechnenHinweis" class="fuss zentriert noprint"></p>
+    </section>
+  </div>
+
+  <!-- -------- Rechte Spalte: Ergebnis -------- -->
+  <div class="spalte-ergebnis" id="ergebnis">
+    <div class="card platzhalter" id="ergebnisPlatzhalter">
+      <h2>Ladeplan</h2>
+      <p>So geht es in drei Schritten:</p>
+      <ol class="anleitung">
+        <li><b>Fahrzeug</b> wählen oder Innenmaße eintragen.</li>
+        <li><b>Ladung erfassen</b> — Maße, Menge und Stapelfaktor genügen. Stammdaten sind optional.</li>
+        <li><b>Ladeplan berechnen</b> — Auslastung, Draufsicht und Seitenansicht erscheinen hier.</li>
+      </ol>
+      <p class="fuss">Alles rechnet im Browser. Es werden keine Daten übertragen.</p>
+    </div>
+
+    <div id="ergebnisInhalt" hidden>
+      <div class="kpis" id="kpis"></div>
+      <div id="hinweise"></div>
+      <div id="plaene"></div>
+
+      <details class="card details" id="detailsKarte">
+        <summary>Rechenweg und Stapelfaktorvergleich</summary>
+        <div class="details-inhalt">
+          <h3>Rechenweg</h3>
+          <div id="rechenweg"></div>
+          <h3>Vergleich Stapelfaktor</h3>
+          <div class="cmp" id="cmp"></div>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ====================== STAMMDATEN ====================== -->
+<section id="view-stammdaten" hidden>
+  <div class="ruecklink noprint">
+    <button class="btn-sec" id="btnZurueckPlaner">&#8592; Zurück zum Planer</button>
+    <span class="fuss">Stammdaten sind eine Komfortfunktion — der Planer funktioniert auch ohne.</span>
+  </div>
+
+  <section class="card">
+    <div class="karte-kopf">
+      <h2>Ladungsträger</h2>
+      <span class="karte-meta" id="stammMeta"></span>
+    </div>
+    <div class="zeile-akt noprint">
       <button class="btn" id="btnNeu">+ Ladungsträger</button>
       <button class="btn-sec" id="btnBeispiel">Beispieldaten laden</button>
       <button class="btn-sec" id="btnExportCsv">Export CSV</button>
-      <button class="btn-sec" id="btnExportJson">Export JSON</button>
+      <button class="btn-sec" id="btnExportJson">Backup JSON</button>
       <button class="btn-sec gefahr" id="btnReset">Alles zurücksetzen</button>
     </div>
     <p id="stammMsg" class="msg" hidden></p>
-    <div class="tscroll">
+    <div class="tscroll" data-scrollhinweis>
       <table id="stammTable">
         <thead><tr>
-          <th style="min-width:120px">ID</th><th style="min-width:180px">Bezeichnung</th>
+          <th style="min-width:110px">ID</th><th style="min-width:170px">Bezeichnung</th>
           <th class="num">Länge mm</th><th class="num">Breite mm</th><th class="num">Höhe mm</th>
           <th class="num">Gewicht kg</th><th class="num">Stapel max.</th><th></th>
         </tr></thead>
         <tbody id="stammBody"></tbody>
       </table>
     </div>
-  </div>
+  </section>
 
-  <div class="card noprint">
-    <h2>Stammdaten importieren<button type="button" class="hlp" data-hlp="import" aria-label="Erklärung"></button></h2>
-    <p class="sub">CSV oder ein JSON-Export dieser App. Die Datei wird im Browser gelesen und nirgendwohin übertragen.</p>
-    <div class="imp">
-      <label class="filebtn">
-        <input type="file" id="importDatei" accept=".csv,.txt,.json,text/csv,application/json">
-        <span>Datei wählen</span>
-      </label>
-      <span class="oder">oder einfügen</span>
+  <section class="card noprint">
+    <div class="karte-kopf">
+      <h2>Importieren</h2>
+      <button type="button" class="hlp" data-hlp="import" aria-label="Erklärung"></button>
     </div>
-    <textarea id="importText" rows="4" placeholder="id;bezeichnung;laenge_mm;breite_mm;hoehe_mm;gewicht_kg;stapelfaktor_max&#10;EP-01;Europalette;1200;800;1000;400;2"></textarea>
-    <div style="margin-top:8px"><button class="btn-sec" id="btnImportText">Text einlesen</button></div>
+    <p class="sub">Excel-Datei (.xlsx) oder CSV. Die Datei wird im Browser gelesen und nirgendwohin übertragen.</p>
+    <label class="filebtn">
+      <input type="file" id="importDatei" accept=".csv,.txt,.json,.xlsx,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      <span class="btn">Datei auswählen</span>
+    </label>
+    <span class="dateiname" id="dateiName"></span>
     <p id="importMsg" class="msg" hidden></p>
     <div id="importVorschau" class="vorschau" hidden></div>
-  </div>
 
-</section>
-
-<!-- ====================== 2 · SENDUNG ====================== -->
-<section id="view-sendung" role="tabpanel" aria-labelledby="tab-sendung" hidden>
-<div class="grid">
-  <div>
-    <div class="card">
-      <h2>Fahrzeug<button type="button" class="hlp noprint" data-hlp="fahrzeug" aria-label="Erklärung"></button></h2>
-      <label class="lbl" for="fzg">Vorlage</label>
-      <select id="fzg"></select>
-      <div class="row4">
-        <div><label class="lbl" for="fL">Innenlänge mm</label><input type="number" id="fL" min="0"></div>
-        <div><label class="lbl" for="fB">Innenbreite mm</label><input type="number" id="fB" min="0"></div>
-        <div><label class="lbl" for="fH">Innenhöhe mm</label><input type="number" id="fH" min="0"></div>
-        <div><label class="lbl" for="fLDM">LDM</label><input type="text" id="fLDM" disabled></div>
-      </div>
-      <div class="row2">
-        <div><label class="lbl" for="fN">Nutzlast kg <span class="opt">optional</span><button type="button" class="hlp noprint" data-hlp="nutzlast" aria-label="Erklärung"></button></label>
-          <input type="number" id="fN" min="0" placeholder="z. B. 24000"></div>
-      </div>
-      <p class="fuss">Vorlagen sind Richtwerte und gelten nicht für jedes reale Fahrzeug. Innenmaße im Einzelfall prüfen.</p>
-    </div>
-
-    <div class="card">
-      <h2>Positionen</h2>
-      <p id="posLeerHinweis" class="sub warnzeile" hidden>Noch keine Stammdaten – zuerst Schritt 1 ausfüllen oder Sonderladungsträger verwenden.</p>
-      <div class="qebox noprint">
-        <label class="lbl" for="qNr">Schnellerfassung · ID, Bezeichnung oder Maß<button type="button" class="hlp" data-hlp="nummer" aria-label="Erklärung"></button></label>
-        <div class="qe">
-          <input id="qNr" placeholder="z. B. EP-01 oder 1200x800">
-          <input id="qMenge" type="number" min="1" placeholder="Menge">
-          <button class="btn-sec" id="btnQeAdd">Übernehmen</button>
-        </div>
-        <div class="qehint" id="qHint">ID, Bezeichnung oder Maß eintippen, Enter, Menge, Enter &#8211; fertig.</div>
-      </div>
-      <div class="tscroll">
-        <table id="posTable">
-          <thead><tr>
-            <th style="width:52%">Ladungsträger · L × B × H</th><th class="num" style="width:17%">Menge</th>
-            <th class="num" style="width:19%">Stapel<button type="button" class="hlp noprint" data-hlp="stapel" aria-label="Erklärung"></button></th><th style="width:12%"></th>
-          </tr></thead>
-          <tbody id="posBody"></tbody>
-        </table>
-      </div>
-      <div class="aktionen noprint" style="margin-top:10px">
-        <button class="btn-sec" id="btnPos">+ Position</button>
-        <button class="btn-sec" id="btnPosSonder">+ Sonderladungsträger</button>
-        <button type="button" class="hlp" data-hlp="sonder" aria-label="Erklärung"></button>
-        <button class="btn-sec gefahr" id="btnLeeren">Leeren</button>
-      </div>
-      <p id="posMsg" class="msg" hidden></p>
-      <p class="fuss">Enter im Mengenfeld hängt direkt die nächste Position an.</p>
-    </div>
-
-    <div class="card noprint">
-      <h2>Versandliste einfügen</h2>
-      <label class="lbl" for="paste">Je Zeile: Menge und ID aus den Stammdaten (Reihenfolge egal)</label>
-      <textarea id="paste" rows="4" placeholder="EP-01&#9;48&#10;12&#9;GB-01&#10;KLT-01 120"></textarea>
-      <div style="margin-top:8px"><button class="btn-sec" id="btnPaste">Zeilen übernehmen</button></div>
-      <p id="importPasteMsg" class="msg" hidden></p>
-    </div>
-  </div>
-
-  <div>
-    <div class="kpis" id="kpis"></div>
-    <div id="hinweise"></div>
-    <div class="card">
-      <h2>Vergleich Stapelfaktor</h2>
-      <div class="cmp" id="cmp"></div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- ====================== 3 · LADEPLAN ====================== -->
-<section id="view-ladeplan" role="tabpanel" aria-labelledby="tab-ladeplan" hidden>
-  <div class="kpis" id="kpis-plan"></div>
-  <div id="hinweise-plan"></div>
-  <div id="plaene"></div>
-  <div class="card">
-    <h2>Rechenweg</h2>
-    <div id="rechenweg"></div>
-  </div>
+    <details class="experte">
+      <summary>CSV als Text einfügen</summary>
+      <label class="lbl" for="importText">Kopfzeile und Datenzeilen</label>
+      <textarea id="importText" rows="4" placeholder="id;bezeichnung;laenge_mm;breite_mm;hoehe_mm;gewicht_kg;stapelfaktor_max&#10;EP-01;Europalette;1200;800;1000;400;2"></textarea>
+      <div class="zeile-akt"><button class="btn-sec" id="btnImportText">Text einlesen</button></div>
+    </details>
+  </section>
 </section>
 
 <div id="hpop" class="hpop noprint" hidden></div>
 
 <footer>
-  <p><b>LAB 01 · LDM Planer</b> <span id="stand"></span></p>
+  <p class="f-titel"><b>LAB 01 · LDM Planer</b> <span class="f-version">Version 1.0 · September 2026</span></p>
   <p>Entstanden aus einem realen Problem in der Supply-Chain-Praxis und für die allgemeine Nutzung weiterentwickelt.</p>
-  <p>Alle Planungs- und Stammdaten werden lokal im Browser verarbeitet. Es werden keine Daten übertragen.</p>
-  <p>Rechnet ohne Achslastprüfung. Das Ergebnis ist eine Planungshilfe, keine Ladungssicherungsfreigabe.</p>
+  <p><b>Deine Daten bleiben in deinem Browser.</b> Alle Planungs- und Stammdaten werden lokal verarbeitet, es werden keine Daten übertragen.</p>
+  <p>Planungshilfe. Keine Ladungssicherungsfreigabe. Keine Achslastprüfung.</p>
   <p class="noprint"><a href="https://christianaust.eu/">christianaust.eu</a></p>
 </footer>
 </main>

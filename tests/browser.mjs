@@ -1,18 +1,15 @@
 /*
- * Browser-Abnahme mit Playwright.
+ * Browser-Abnahme mit Playwright — Szenarien A bis M.
  *
- * Playwright ist bewusst KEINE Projektabhängigkeit — die App selbst hat keine.
- * Der Treiber wird zur Laufzeit gesucht:
+ * Playwright ist bewusst KEINE Projektabhängigkeit; die App selbst hat keine.
  *   node tests/browser.mjs
  *   PLAYWRIGHT=/pfad/zu/node_modules/playwright node tests/browser.mjs
- * Fehlt er, endet das Skript mit einem Hinweis statt mit einem Fehlschlag.
+ * Fehlt der Treiber, endet das Skript mit einem Hinweis statt einem Fehlschlag.
  */
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { mkdtemp, readdir } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
 
 const WURZEL = dirname(dirname(fileURLToPath(import.meta.url)))
 const PORT = Number(process.env.PORT || 8099)
@@ -20,29 +17,24 @@ const BASIS = `http://127.0.0.1:${PORT}/`
 const require = createRequire(import.meta.url)
 
 let bestanden = 0, fehlgeschlagen = 0
-const pruefe = (name, bedingung, detail = '') => {
-  if (bedingung) { bestanden++; console.log(`  ok   ${name}`) }
+const pruefe = (name, ok, detail = '') => {
+  if (ok) { bestanden++; console.log(`  ok   ${name}`) }
   else { fehlgeschlagen++; console.log(`  FAIL ${name}${detail ? ' — ' + detail : ''}`) }
 }
+const warte = ms => new Promise(r => setTimeout(r, ms))
 
 function ladePlaywright() {
-  const kandidaten = [process.env.PLAYWRIGHT, 'playwright'].filter(Boolean)
-  for (const k of kandidaten) {
+  for (const k of [process.env.PLAYWRIGHT, 'playwright'].filter(Boolean)) {
     try { return require(k) } catch {}
-  }
-  for (const p of (process.env.PLAYWRIGHT_SUCHPFADE || '').split(':').filter(Boolean)) {
-    try { return require(p) } catch {}
   }
   return null
 }
-
-const warte = ms => new Promise(r => setTimeout(r, ms))
 
 async function main() {
   const pw = ladePlaywright()
   if (!pw) {
     console.log('Playwright nicht gefunden – Browser-Abnahme übersprungen.')
-    console.log('Mit Treiber ausführen: PLAYWRIGHT=/pfad/zu/node_modules/playwright node tests/browser.mjs')
+    console.log('Mit Treiber: PLAYWRIGHT=/pfad/zu/node_modules/playwright node tests/browser.mjs')
     process.exit(0)
   }
 
@@ -51,199 +43,259 @@ async function main() {
   await warte(700)
 
   const browser = await pw.chromium.launch()
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
-
-  /* Datenschutz: jede Anfrage mitschreiben */
+  const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 } })
   const anfragen = []
   ctx.on('request', r => anfragen.push(r.url()))
-
   const page = await ctx.newPage()
   const fehlerKonsole = []
   page.on('pageerror', e => fehlerKonsole.push(String(e)))
   page.on('console', m => { if (m.type() === 'error') fehlerKonsole.push(m.text()) })
 
+  /* Hilfen */
+  const manuell = async (bez, l, b, h, gewicht, menge, stapel, id = '') => {
+    await page.fill('#mBez', bez)
+    await page.fill('#mId', id)
+    await page.fill('#mL', String(l)); await page.fill('#mB', String(b)); await page.fill('#mH', String(h))
+    await page.fill('#mG', gewicht === null ? '' : String(gewicht))
+    await page.fill('#mMenge', String(menge)); await page.fill('#mStapel', String(stapel))
+    await page.click('#btnManuellAdd'); await warte(130)
+  }
+  const kpiText = async () => (await page.locator('#kpis').textContent()).replace(/\s+/g, ' ')
+  const kpiZahl = async label => {
+    const t = (await page.locator('#kpis').textContent()).replace(/\s/g, '')
+    const m = t.match(new RegExp(label + '\\??([0-9.,]+)'))
+    return m ? m[1] : null
+  }
+  const positionen = () => page.locator('#posBody tr').count()
+  const leeren = async () => {
+    page.once('dialog', d => d.accept())
+    await page.click('#btnLeeren'); await warte(200)
+  }
+
   try {
-    /* ---------------- 1 · Leerer Start ---------------- */
-    console.log('\n1 · Leerer Start')
+    /* ---------- A · ohne Stammdaten sofort rechnen ---------- */
+    console.log('\nA · Keine Stammdaten, eine Position manuell, Ladeplan rechnen')
     await page.goto(BASIS, { waitUntil: 'networkidle' })
-    pruefe('Titel gesetzt', (await page.title()).includes('LDM Planer'))
-    pruefe('startet bei Stammdaten', await page.locator('#tab-stammdaten').getAttribute('aria-selected') === 'true')
-    pruefe('leerer Bestand wird benannt', (await page.locator('#stammMeta').textContent()).includes('Noch keine'))
-    pruefe('keine Positionen', (await page.locator('#posBody').textContent()).includes('Noch keine Position'))
+    await page.evaluate(() => localStorage.clear())
+    await page.reload({ waitUntil: 'networkidle' })
 
-    /* ---------------- 2 · Beispieldaten ---------------- */
-    console.log('\n2 · Beispieldaten')
-    await page.click('#btnBeispiel')
-    const zeilen = await page.locator('#stammBody tr').count()
-    pruefe('Beispieldaten geladen', zeilen === 5, `${zeilen} Zeilen`)
-    pruefe('Kennzahlen aus dem Bestand gerechnet', /5 Ladungsträger/.test(await page.locator('#stammMeta').textContent()))
+    pruefe('Startseite zeigt den Planer, nicht die Stammdaten', await page.locator('#fahrzeugKarte').isVisible())
+    pruefe('Stammdaten sind nicht im Hauptweg', await page.locator('#view-stammdaten').isHidden())
+    pruefe('manuelle Erfassung ist der voreingestellte Weg', await page.locator('#form-manuell').isVisible())
+    pruefe('Ergebnisbereich erklärt den Einstieg', /drei Schritten/.test(await page.locator('#ergebnisPlatzhalter').textContent()))
+    pruefe('Rechnen ist ohne Position gesperrt', await page.locator('#btnRechnen').isDisabled())
 
-    /* ---------------- 3 · Manueller Ladungsträger ---------------- */
-    console.log('\n3 · Manueller Ladungsträger')
-    await page.click('#btnNeu')
-    pruefe('Zeile angelegt', await page.locator('#stammBody tr').count() === 6)
-    const neueZeile = page.locator('#stammBody tr').last()
-    await neueZeile.locator('input[data-feld="bezeichnung"]').fill('Sonderbehälter')
-    await neueZeile.locator('input[data-feld="laenge_mm"]').fill('1500')
-    await neueZeile.locator('input[data-feld="laenge_mm"]').blur()
-    await warte(120)
-    pruefe('Änderung gespeichert', /Gespeichert|angelegt/.test(await page.locator('#stammMsg').textContent()))
+    await page.selectOption('#fzg', 'mega')
+    await manuell('Gitterbox', 1240, 835, 970, 700, 44, 3)
+    pruefe('Position ohne Stammdaten angelegt', await positionen() === 1)
+    pruefe('Rechnen ist jetzt möglich', await page.locator('#btnRechnen').isEnabled())
+    await page.click('#btnRechnen'); await warte(500)
+    pruefe('Ergebnis erscheint', await page.locator('#ergebnisInhalt').isVisible())
+    pruefe('Ladeplan gezeichnet', await page.locator('#plaene svg[aria-label*="Draufsicht"]').count() >= 1)
+    pruefe('Stammdaten blieben leer', await page.evaluate(() => !localStorage.getItem('ldm-planer.stammdaten')))
 
-    /* ---------------- 4 · Ungültige Eingabe ---------------- */
-    console.log('\n4 · Ungültige Eingabe')
-    await neueZeile.locator('input[data-feld="laenge_mm"]').fill('0')
-    await neueZeile.locator('input[data-feld="laenge_mm"]').blur()
-    await warte(120)
-    pruefe('Maß 0 wird abgelehnt', /größer als 0/.test(await page.locator('#stammMsg').textContent()))
-    await neueZeile.locator('input[data-feld="id"]').fill('EP-01')
-    await neueZeile.locator('input[data-feld="id"]').blur()
-    await warte(120)
-    pruefe('doppelte ID wird abgelehnt', /doppelt/.test(await page.locator('#stammMsg').textContent()))
+    /* ---------- B · mehrere Positionen manuell ---------- */
+    console.log('\nB · Mehrere Positionen komplett manuell')
+    await manuell('Europalette', 1200, 800, 1000, 400, 30, 2)
+    await manuell('Behälter', 1200, 1000, 750, 300, 12, 2)
+    pruefe('drei Positionen erfasst', await positionen() === 3)
+    const kpiB = await kpiText()
+    pruefe('Stückzahl stimmt (44+30+12)', /86 Ladungsträger/.test(kpiB), kpiB.slice(0, 120))
+    pruefe('Sendungszähler stimmt', /3 Positionen/.test(await page.locator('#sendungMeta').textContent()))
 
-    /* ---------------- 5 · CSV-Import ---------------- */
-    console.log('\n5 · CSV-Import')
-    await page.fill('#importText', [
-      'Nummer;Benennung;Länge;Breite;Höhe;Gewicht;Stapelbarkeit',
-      'CSV-01;Importierte Kiste;1.200;1000;900;250;3',
-      'CSV-02;Zweite Kiste;800;600;500;60;4',
-      'CSV-03;Kaputt;0;600;500;60;4',
-      'CSV-01;Dublette;800;600;500;60;4'
-    ].join('\n'))
-    await page.click('#btnImportText')
-    await warte(200)
-    const vorschau = await page.locator('#importVorschau').textContent()
-    pruefe('Trennzeichen erkannt', /Semikolon/.test(vorschau))
-    pruefe('Kopfzeile erkannt', /Kopfzeile erkannt/.test(vorschau))
-    pruefe('gültige Zeilen gezählt', /2 gültig/.test(vorschau))
-    pruefe('ungültige Zeilen gemeldet', /2 abgelehnt/.test(vorschau))
-    pruefe('Fehlergrund genannt', /größer als 0/.test(vorschau) && /doppelt/.test(vorschau))
-    pruefe('Spaltenzuordnung angeboten', await page.locator('#importVorschau select[data-map]').count() >= 7)
-    await page.click('[data-import="anhaengen"]')
-    await warte(200)
-    pruefe('Import angehängt', /8 Ladungsträger/.test(await page.locator('#stammMsg').textContent()),
-      await page.locator('#stammMsg').textContent())
+    /* ---------- Positionen bearbeiten, duplizieren, löschen ---------- */
+    console.log('\nB2 · Positionen bearbeiten, duplizieren, löschen')
+    await page.click('#posBody tr:nth-child(3) [data-dupliziere]'); await warte(200)
+    pruefe('duplizieren fügt eine Zeile an', await positionen() === 4)
+    await page.click('#posBody tr:nth-child(4) [data-loesche]'); await warte(200)
+    pruefe('löschen entfernt die Zeile', await positionen() === 3)
+    await page.click('#posBody tr:nth-child(3) [data-bearbeite]'); await warte(200)
+    pruefe('bearbeiten füllt das Formular', await page.inputValue('#mBez') === 'Behälter')
+    await page.fill('#mMenge', '20')
+    await page.click('#btnManuellAdd'); await warte(200)
+    pruefe('bearbeiten ersetzt statt anzuhängen', await positionen() === 3)
+    pruefe('geänderte Menge übernommen', /94 Ladungsträger/.test(await kpiText()))
 
-    /* ---------------- 6 · Sendung und Schnellerfassung ---------------- */
-    console.log('\n6 · Sendung, Schnellerfassung, Rechnung')
-    await page.click('#tab-sendung')
-    await page.fill('#qNr', 'EP-01')
-    pruefe('Trefferanzeige', /Stapel/.test(await page.locator('#qHint').textContent()))
-    await page.fill('#qMenge', '30')
-    await page.click('#btnQeAdd')
-    await warte(150)
-    pruefe('Position übernommen', await page.locator('#posBody tr').count() === 1)
-    const kpi = await page.locator('#kpis').textContent()
-    pruefe('Ladelänge berechnet', /\d+,\d{2}/.test(kpi))
-    pruefe('ein Fahrzeug genügt', /BenötigteFahrzeuge1[^0-9]/.test(kpi.replace(/\s/g, '')), kpi.replace(/\s+/g, ' ').slice(0, 160))
-    pruefe('Ladelänge korrekt (30 × 1200×800, Stapel 2 → 6,00 m)', /6,00/.test(kpi), kpi.replace(/\s+/g, ' ').slice(0, 120))
-    pruefe('Gewicht ausgewiesen', /12\.000/.test(kpi), 'erwartet 30 × 400 kg')
+    /* ---------- G · Gewicht unbekannt ---------- */
+    console.log('\nG · Gewicht unbekannt')
+    await manuell('KLT ohne Gewicht', 600, 400, 280, null, 60, 5)
+    const kpiG = await kpiText()
+    pruefe('Position ohne Gewicht wird ausgewiesen', /1 Position ohne Gewicht/.test(kpiG), kpiG.slice(0, 200))
+    pruefe('Berechnung läuft trotzdem', await page.locator('#plaene .truckblk').count() >= 1)
+    pruefe('Tabelle zeigt fehlendes Gewicht als Strich', (await page.locator('#posBody').textContent()).includes('–'))
 
-    /* ---------------- 7 · Höhenbegrenzung ---------------- */
-    console.log('\n7 · Höhenbegrenzung')
-    await page.fill('#fH', '1500')
-    await page.locator('#fH').blur()
-    await warte(150)
-    pruefe('Stapel wird durch Innenhöhe begrenzt', /Höhe/.test(await page.locator('#hinweise').textContent()))
-    await page.fill('#fH', '3000')
-    await page.locator('#fH').blur()
-    await warte(150)
+    /* ---------- H · Nutzlast überschritten ---------- */
+    console.log('\nH · Nutzlast überschritten')
+    await page.fill('#fN', '5000'); await page.locator('#fN').blur(); await warte(300)
+    pruefe('Nutzlast-Kennzahl schlägt an', /überschritten/.test(await kpiText()))
+    pruefe('Hinweis nennt die Überschreitung', /Nutzlast/.test(await page.locator('#hinweise').textContent()))
+    await page.fill('#fN', '45000'); await page.locator('#fN').blur(); await warte(300)
+    pruefe('ausreichende Nutzlast wird bestätigt', /eingehalten/.test(await kpiText()), (await kpiText()).slice(-140))
+    await page.fill('#fN', '24000'); await page.locator('#fN').blur(); await warte(300)
 
-    /* ---------------- 8 · Mehrere Fahrzeuge und Restkapazität ---------------- */
-    console.log('\n8 · Mehrere Fahrzeuge')
-    await page.fill('#qNr', 'GB-01')
-    await page.fill('#qMenge', '120')
-    await page.click('#btnQeAdd')
-    await warte(200)
-    const kpi2 = await page.locator('#kpis').textContent()
-    const fzgAnzahl = Number((kpi2.replace(/\s/g, '').match(/BenötigteFahrzeuge(\d+)/) || [])[1])
-    pruefe('mehrere Fahrzeuge nötig', fzgAnzahl > 1, `${fzgAnzahl} Fahrzeuge`)
-    await page.click('#tab-ladeplan')
-    await warte(200)
-    const plaene = await page.locator('#plaene').textContent()
-    pruefe('ein Ladeplan je Fahrzeug', await page.locator('#plaene .truckblk').count() === fzgAnzahl)
-    pruefe('Restkapazität ausgewiesen', /Restkapazität/.test(plaene))
-    pruefe('Draufsicht gezeichnet', await page.locator('#plaene svg[aria-label*="Draufsicht"]').count() === fzgAnzahl)
-    pruefe('Seitenansicht gezeichnet', await page.locator('#plaene svg[aria-label*="Seitenansicht"]').count() === fzgAnzahl)
-    pruefe('Rechenweg gefüllt', /Grundfläche/.test(await page.locator('#rechenweg').textContent()))
+    /* ---------- I · Stapel durch Fahrzeughöhe begrenzt ---------- */
+    console.log('\nI · Stapel durch Fahrzeughöhe begrenzt')
+    await page.fill('#fH', '1500'); await page.locator('#fH').blur(); await warte(300)
+    pruefe('Höhenhinweis erscheint', /Stapelfaktor auf \d+ reduziert/.test(await page.locator('#hinweise').textContent()))
+    await page.fill('#fH', '3000'); await page.locator('#fH').blur(); await warte(300)
+
+    /* ---------- J · mehrere Fahrzeuge ---------- */
+    console.log('\nJ · Mehrere Fahrzeuge erforderlich')
+    const fzg = Number(await kpiZahl('BenötigteFahrzeuge'))
+    pruefe('mehr als ein Fahrzeug nötig', fzg > 1, `${fzg} Fahrzeuge`)
+    pruefe('ein Ladeplan je Fahrzeug', await page.locator('#plaene .truckblk').count() === fzg)
+    pruefe('Restkapazität ausgewiesen', /Restkapazität/.test(await page.locator('#plaene').textContent()))
+
+    /* ---------- K · Draufsicht und Seitenansicht ---------- */
+    console.log('\nK · Draufsicht und Seitenansicht')
+    pruefe('Draufsicht je Fahrzeug', await page.locator('#plaene svg[aria-label*="Draufsicht"]').count() === fzg)
+    pruefe('Seitenansicht je Fahrzeug', await page.locator('#plaene svg[aria-label*="Seitenansicht"]').count() === fzg)
+    pruefe('Legende nennt die Bezeichnungen', /Gitterbox/.test(await page.locator('#plaene .legend').first().textContent()))
+    pruefe('Ladepläne skalieren mit der Spalte',
+      await page.locator('#plaene svg').first().evaluate(el => el.getAttribute('width') === '100%'))
+    await page.locator('#detailsKarte summary').click(); await warte(300)
+    pruefe('Rechenweg aufklappbar und gefüllt', /Grundfläche/.test(await page.locator('#rechenweg').textContent()))
     pruefe('Stapelfaktorvergleich zeigt drei Varianten', await page.locator('#cmp .c').count() === 3)
 
-    /* ---------------- 9 · Nutzlast ---------------- */
-    console.log('\n9 · Gewicht und Nutzlast')
-    await page.click('#tab-sendung')
-    await page.fill('#fN', '5000')
-    await page.locator('#fN').blur()
-    await warte(200)
-    pruefe('Nutzlastwarnung erscheint', /Nutzlast/.test(await page.locator('#hinweise').textContent()))
-    await page.fill('#fN', '24000')
-    await page.locator('#fN').blur()
-    await warte(150)
+    /* ---------- C · Schnellerfassung aus Stammdaten ---------- */
+    console.log('\nC · Beispieldaten und Schnellerfassung')
+    await leeren()
+    await page.click('#tab-stamm'); await warte(200)
+    pruefe('Hinweis auf fehlende Stammdaten', await page.locator('#stammLeer').isVisible())
+    await page.click('#btnBeispielSchnell'); await warte(400)
+    pruefe('Beispieldaten geladen, Suche frei', await page.locator('#stammSuche').isVisible())
+    await page.fill('#qNr', 'GB-01'); await warte(200)
+    const hint = await page.locator('#qHint').textContent()
+    pruefe('Treffer zeigt Maße und Gewicht', /1240 × 835 × 970/.test(hint) && /700/.test(hint), hint)
+    pruefe('Stapelfaktor vorbelegt', await page.inputValue('#qStapel') === '3')
+    await page.fill('#qMenge', '24')
+    await page.click('#btnQeAdd'); await warte(300)
+    pruefe('Position aus Stammdaten übernommen', await positionen() === 1)
+    pruefe('Maße wurden übernommen', /1240.835.970/.test((await page.locator('#posBody').textContent()).replace(/\s/g, '')))
+    pruefe('ID wurde mitgeführt', (await page.locator('#posBody').textContent()).includes('GB-01'))
 
-    /* ---------------- 10 · Versandliste ---------------- */
-    console.log('\n10 · Versandliste einfügen')
-    const vorher = await page.locator('#posBody tr').count()
-    await page.fill('#paste', 'KLT-01\t40\n12 IP-01\nUNBEKANNT 5')
-    await page.click('#btnPaste')
-    await warte(200)
-    pruefe('zwei Zeilen übernommen', await page.locator('#posBody tr').count() === vorher + 2)
-    pruefe('unbekannte Zeile gemeldet', /UNBEKANNT/.test(await page.locator('#importPasteMsg').textContent()))
+    /* ---------- D · CSV-Import ---------- */
+    console.log('\nD · CSV importieren und daraus erfassen')
+    await page.click('#btnStammdaten'); await warte(300)
+    await page.locator('.experte summary').click(); await warte(150)
+    await page.fill('#importText', [
+      'Nummer;Benennung;Länge;Breite;Höhe;Gewicht;Stapelbarkeit',
+      'CSV-01;Kiste aus CSV;1.200;1000;900;250;3',
+      'CSV-02;Kaputt;0;600;500;60;4'
+    ].join('\n'))
+    await page.click('#btnImportText'); await warte(300)
+    const vorschau = await page.locator('#importVorschau').textContent()
+    pruefe('CSV erkannt', /CSV/.test(vorschau) && /Semikolon/.test(vorschau))
+    pruefe('gültig und abgelehnt gezählt', /1 gültig/.test(vorschau) && /1 abgelehnt/.test(vorschau))
+    pruefe('Spaltenzuordnung änderbar', await page.locator('#importVorschau select[data-map]').count() >= 7)
+    await page.click('[data-import="anhaengen"]'); await warte(400)
+    pruefe('Import angehängt', /6 Ladungsträger/.test(await page.locator('#stammMsg').textContent()),
+      await page.locator('#stammMsg').textContent())
+    await page.click('#btnZurueckPlaner'); await warte(300)
+    await page.click('#tab-stamm')
+    await page.fill('#qNr', 'CSV-01'); await warte(200)
+    await page.fill('#qMenge', '10')
+    await page.click('#btnQeAdd'); await warte(300)
+    pruefe('Position aus CSV-Stammdaten nutzbar', await positionen() === 2)
 
-    /* ---------------- 11 · Persistenz ---------------- */
-    console.log('\n11 · Persistenz über Neustart')
-    const vorReload = await page.locator('#posBody tr').count()
-    await page.reload({ waitUntil: 'networkidle' })
-    await warte(250)
-    await page.click('#tab-sendung')
-    await page.click('#tab-stammdaten')
-    pruefe('Bestand wiederhergestellt', await page.locator('#stammBody tr').count() === 8)
-    await page.click('#tab-sendung')
-    pruefe('Sendung wiederhergestellt', await page.locator('#posBody tr').count() === vorReload)
-    pruefe('Fahrzeug wiederhergestellt', await page.locator('#fN').inputValue() === '24000')
+    /* ---------- E · XLSX-Import ---------- */
+    console.log('\nE · XLSX importieren und daraus erfassen')
+    pruefe('Browser kann XLSX entpacken', await page.evaluate(() => {
+      try { new DecompressionStream('deflate-raw'); return true } catch { return false }
+    }))
+    await page.click('#btnStammdaten'); await warte(300)
+    await page.setInputFiles('#importDatei', join(WURZEL, 'tests/fixtures/stammdaten-beispiel.xlsx'))
+    await warte(700)
+    const xv = await page.locator('#importVorschau').textContent()
+    pruefe('XLSX gelesen', /XLSX/.test(xv), xv.slice(0, 120))
+    pruefe('drei Zeilen erkannt', /3 Datenzeilen/.test(xv), xv.slice(0, 160))
+    pruefe('Kopfzeile aus Excel zugeordnet', /3 gültig/.test(xv), xv.slice(0, 200))
+    await page.click('[data-import="anhaengen"]'); await warte(400)
+    pruefe('XLSX-Daten im Bestand', /9 Ladungsträger/.test(await page.locator('#stammMsg').textContent()),
+      await page.locator('#stammMsg').textContent())
+    await page.click('#btnZurueckPlaner'); await warte(300)
+    await page.click('#tab-stamm')
+    await page.fill('#qNr', 'XL-01'); await warte(200)
+    pruefe('XLSX-Eintrag gefunden', /Gitterbox aus Excel/.test(await page.locator('#qHint').textContent()))
+    await page.fill('#qMenge', '6')
+    await page.click('#btnQeAdd'); await warte(300)
+    pruefe('Position aus XLSX-Stammdaten nutzbar', await positionen() === 3)
 
-    /* ---------------- 12 · Export ---------------- */
-    console.log('\n12 · Export')
-    await page.click('#tab-stammdaten')
+    /* ---------- F · manuell angelegte Stammdaten überleben den Neustart ---------- */
+    console.log('\nF · Stammdaten speichern und nach Neustart nutzen')
+    await page.click('#tab-manuell')
+    await page.check('#mMerken')
+    await manuell('Sonderrahmen', 1500, 1200, 1400, 850, 4, 1, 'SR-01')
+    pruefe('Position hinzugefügt', await positionen() === 4)
+    await page.reload({ waitUntil: 'networkidle' }); await warte(500)
+    pruefe('Sendung überlebt den Neustart', await positionen() === 4)
+    await page.click('#btnStammdaten'); await warte(300)
+    const stammWerte = await page.locator('#stammBody input').evaluateAll(els => els.map(e => e.value))
+    pruefe('gemerkter Ladungsträger ist da', stammWerte.includes('Sonderrahmen'), stammWerte.join(' | '))
+    await page.click('#btnZurueckPlaner'); await warte(200)
+    await page.click('#tab-stamm')
+    await page.fill('#qNr', 'SR-01'); await warte(200)
+    pruefe('gemerkter Satz ist wiederverwendbar', /1500 × 1200 × 1400/.test(await page.locator('#qHint').textContent()))
+
+    /* ---------- Export ---------- */
+    console.log('\nExport')
+    await page.click('#btnStammdaten'); await warte(300)
     for (const [knopf, endung] of [['#btnExportCsv', '.csv'], ['#btnExportJson', '.json']]) {
       const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 5000 }), page.click(knopf)])
       pruefe(`Export ${endung}`, dl.suggestedFilename().endsWith(endung), dl.suggestedFilename())
     }
 
-    /* ---------------- 13 · Druckansicht ---------------- */
-    console.log('\n13 · Druckansicht')
-    await page.click('#tab-ladeplan')
-    await page.emulateMedia({ media: 'print' })
-    await warte(150)
+    /* ---------- L · Druckansicht ---------- */
+    console.log('\nL · Druckansicht')
+    await page.click('#btnZurueckPlaner'); await warte(200)
+    await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')))
+    await page.emulateMedia({ media: 'print' }); await warte(300)
     pruefe('Ladeplan im Druck sichtbar', await page.locator('#plaene .truckblk').first().isVisible())
-    pruefe('Bedienelemente im Druck ausgeblendet', !(await page.locator('.steps').isVisible()))
-    const schuss = join(await mkdtemp(join(tmpdir(), 'ldm-')), 'druck.png')
-    await page.screenshot({ path: schuss, fullPage: false })
-    await page.emulateMedia({ media: 'screen' })
+    pruefe('Sendungstabelle im Druck sichtbar', await page.locator('#posTable').isVisible())
+    pruefe('Erfassungsmaske im Druck ausgeblendet', await page.locator('#erfassenKarte').isHidden())
+    pruefe('Rechenweg im Druck aufgeklappt', await page.locator('#rechenweg').isVisible())
+    pruefe('Knöpfe im Druck ausgeblendet', await page.locator('#btnRechnen').isHidden())
+    await page.emulateMedia({ media: 'screen' }); await warte(200)
 
-    /* ---------------- 14 · Ansichten ---------------- */
-    console.log('\n14 · Desktop, Tablet, Mobile')
-    for (const [name, w, h] of [['Desktop', 1440, 950], ['Tablet', 834, 1112], ['Mobile', 390, 844]]) {
-      await page.setViewportSize({ width: w, height: h })
-      await warte(150)
-      const scrollt = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
-      pruefe(`${name}: kein horizontaler Seitenscroll`, !scrollt)
-      pruefe(`${name}: Schrittleiste bedienbar`, await page.locator('#tab-sendung').isVisible())
+    /* ---------- M · Desktop, Tablet, Mobile ---------- */
+    console.log('\nM · Desktop, Tablet, Mobile')
+    for (const [name, w, h] of [['Desktop', 1600, 1000], ['Tablet', 834, 1112], ['Mobile', 390, 844]]) {
+      await page.setViewportSize({ width: w, height: h }); await warte(350)
+      const ueber = await page.evaluate(() => {
+        const w = document.documentElement.clientWidth
+        return {
+          zuviel: document.documentElement.scrollWidth - w,
+          schuldige: [...document.querySelectorAll('body *')]
+            .filter(e => e.getBoundingClientRect().right > w + 1)
+            .slice(0, 5).map(e => `${e.tagName}.${(e.className || '').toString().slice(0, 28)}`)
+        }
+      })
+      pruefe(`${name}: kein horizontaler Seitenscroll`, ueber.zuviel <= 1,
+        `${ueber.zuviel}px über: ${ueber.schuldige.join(', ')}`)
+      pruefe(`${name}: Hauptaktion sichtbar`, await page.locator('#btnRechnen').isVisible())
+      pruefe(`${name}: Erfassung bedienbar`, await page.locator('#mBez').isVisible() || await page.locator('#qNr').isVisible())
     }
-    await page.setViewportSize({ width: 1440, height: 950 })
+    const hinweisSichtbar = await page.evaluate(() => {
+      const h = [...document.querySelectorAll('.scrollhinweis')]
+      return h.some(x => x.classList.contains('an') && getComputedStyle(x).display !== 'none')
+    })
+    pruefe('Mobile: Scrollhinweis unter breiten Bereichen', hinweisSichtbar)
+    await page.setViewportSize({ width: 1600, height: 1000 })
 
-    /* ---------------- 15 · Zurücksetzen ---------------- */
-    console.log('\n15 · Zurücksetzen')
+    /* ---------- Zurücksetzen ---------- */
+    console.log('\nZurücksetzen')
     page.once('dialog', d => d.accept())
-    await page.click('#tab-stammdaten')
-    await page.click('#btnReset')
-    await warte(250)
-    pruefe('Bestand geleert', (await page.locator('#stammMeta').textContent()).includes('Noch keine'))
+    await page.click('#btnStammdaten'); await warte(200)
+    await page.click('#btnReset'); await warte(400)
+    pruefe('Bestand geleert', /Noch keine Stammdaten/.test(await page.locator('#stammMeta').textContent()))
     const rest = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('ldm-planer.')))
     pruefe('lokaler Speicher geleert', rest.length === 0, rest.join(','))
 
-    /* ---------------- 16 · Datenschutz ---------------- */
-    console.log('\n16 · Datenschutz')
+    /* ---------- Datenschutz ---------- */
+    console.log('\nDatenschutz')
     const fremd = anfragen.filter(u => !u.startsWith(BASIS))
     pruefe('keine Fremdanfragen', fremd.length === 0, fremd.join(', '))
-    const nichtStatisch = anfragen.filter(u => u.startsWith(BASIS) && !/\.(html|css|js|png|ico|json|csv)(\?|$)|\/$/.test(u))
+    const nichtStatisch = anfragen.filter(u => u.startsWith(BASIS) && !/\.(html|css|js|png|ico|json|csv|xlsx)(\?|$)|\/$/.test(u))
     pruefe('nur statische Dateien geladen', nichtStatisch.length === 0, nichtStatisch.join(', '))
     pruefe('keine Konsolenfehler', fehlerKonsole.length === 0, fehlerKonsole.slice(0, 3).join(' | '))
 

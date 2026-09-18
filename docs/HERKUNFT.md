@@ -18,7 +18,7 @@ Sie diente ausschließlich als Referenz und bleibt unangetastet.
 - Draufsicht und Seitenansicht als Inline-SVG
 - Rechenweg als nachvollziehbare Tabelle
 - Vergleich verschiedener Stapelfaktoren
-- Schnellerfassung, Versandlisten-Einfügen, Hinweise, Druckfunktion
+- Schnellerfassung, Hinweise, Druckfunktion
 - vollständig lokale Verarbeitung im Browser
 
 ## Entfernt
@@ -31,7 +31,8 @@ Sie diente ausschließlich als Referenz und bleibt unangetastet.
 | Untertitel mit Branchenbezug des Kunden | „Lademeter- und Ladungsplanung direkt im Browser“ |
 | Verweis auf die Quelldatei des Kundenstamms im Quelltext | entfällt |
 | Hilfetexte mit Bezug auf den festen Katalog | auf eigene Stammdaten umformuliert |
-| Farbschema und Typografie des ursprünglichen Umfelds | CA-Branding der Ideenschmiede |
+| Farbschema und Typografie des ursprünglichen Umfelds | CA-Branding: heller Arbeitsplatz mit Navy, Orange und Silber |
+| „Versandliste einfügen" als eigener Block | entfallen — Positionen werden manuell oder aus Stammdaten erfasst |
 
 Ein Kundenname war in der Referenzdatei nicht enthalten; geprüft wurde trotzdem.
 
@@ -45,6 +46,8 @@ Ein Kundenname war in der Referenzdatei nicht enthalten; geprüft wurde trotzdem
 - Gewicht je Ladungsträger, Gesamtgewicht, optionale Nutzlast mit Warnung
 - Schrittführung Stammdaten → Sendung → Ladeplan
 - Persistenz im Browser über Sitzungen hinweg
+- XLSX-Import über einen eigenen Leser, ohne Fremdbibliothek
+- Positionen bearbeiten, duplizieren, löschen
 - Tests: Logik (`node:test`) und Browserabnahme (Playwright)
 
 ## Dauerhafte Absicherung

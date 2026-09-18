@@ -94,19 +94,26 @@ function istKopfzeile(zeile) {
 }
 
 /**
+ * Trennt Kopf- von Datenzeilen und ordnet die Spalten zu.
+ * Quelle egal — CSV-Text und XLSX-Blatt liefern beide Zeilen-Arrays.
+ * @returns {{kopf:string[], zeilen:string[][], zuordnung:object, kopfErkannt:boolean}}
+ */
+export function ausZeilen(alle) {
+  if (!alle || !alle.length) return { kopf: [], zeilen: [], zuordnung: {}, kopfErkannt: false }
+  const kopfErkannt = istKopfzeile(alle[0])
+  const kopf = kopfErkannt ? alle[0] : alle[0].map((_, i) => `Spalte ${i + 1}`)
+  const zeilen = kopfErkannt ? alle.slice(1) : alle
+  return { kopf, zeilen, zuordnung: ordneZu(kopf), kopfErkannt }
+}
+
+/**
  * Liest CSV-Text und liefert alles, was die Oberfläche für die Vorschau braucht.
  * @returns {{trenn:string, kopf:string[], zeilen:string[][], zuordnung:object, kopfErkannt:boolean}}
  */
 export function leseCsv(text, { trenn = null } = {}) {
-  const sauber = String(text ?? '').replace(/^﻿/, '')
+  const sauber = String(text ?? '').replace(/^\uFEFF/, '')
   const t = trenn || erkenneTrennzeichen(sauber)
-  const alle = zerlege(sauber, t)
-  if (!alle.length) return { trenn: t, kopf: [], zeilen: [], zuordnung: {}, kopfErkannt: false }
-
-  const kopfErkannt = istKopfzeile(alle[0])
-  const kopf = kopfErkannt ? alle[0] : alle[0].map((_, i) => `Spalte ${i + 1}`)
-  const zeilen = kopfErkannt ? alle.slice(1) : alle
-  return { trenn: t, kopf, zeilen, zuordnung: ordneZu(kopf), kopfErkannt }
+  return { trenn: t, ...ausZeilen(zerlege(sauber, t)) }
 }
 
 /** Wendet eine Zuordnung auf die Datenzeilen an -> Rohdatensätze für validate.js */

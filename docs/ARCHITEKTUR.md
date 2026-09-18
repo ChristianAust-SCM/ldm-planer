@@ -1,12 +1,24 @@
 # LAB 01 · LDM Planer — Architektur
 
-Stand: 2026-09-18 · Status: **V1 implementiert, Tests grün**
+Stand: 2026-09-18 · Status: **V1 mit UX- und Design-Überarbeitung, Tests grün**
 
 ## Zweck
 
 Öffentliche, allgemeine Fassung eines Lademeter- und Ladungsplaners.
 Eigenständige statische Web-App, getrennt vom privaten Cockpit.
-Zieladresse: `ldm.christianaust.eu`.
+Zieladresse: `ldm.christianaust.eu`, bis dahin `christianaust.eu/ldm-planer/`.
+
+## Hauptweg
+
+**Fahrzeug → Ladung erfassen → Ladeplan berechnen → Ergebnis.**
+
+Eine Position trägt ihre Maße selbst (`{nr?, bezeichnung, l, b, h, gewicht?,
+menge, stapel}`). Stammdaten belegen sie nur vor und sind damit reine
+Komfortfunktion — ohne sie funktioniert der Planer vollständig. Die
+Stammdatenverwaltung liegt deshalb in einer eigenen Ansicht, nicht im Hauptweg.
+
+Das Ergebnis erscheint auf Knopfdruck und aktualisiert sich danach bei jeder
+Änderung, damit es nie veraltet neben den Eingaben steht.
 
 ## Leitentscheidungen
 
@@ -19,13 +31,13 @@ Zieladresse: `ldm.christianaust.eu`.
 | Persistenz | `localStorage` | kein Backend, kein Konto, Daten bleiben im Browser |
 | Übertragung | keine | keine Analytics, keine Requests mit Planungsdaten |
 | Tests | `node:test` + Playwright (extern) | Logiktests ohne Abhängigkeit, Browsertests optional |
-| XLSX | **nicht in V1** | siehe unten |
+| XLSX | eigener Leser, **ohne Bibliothek** | siehe unten |
 | Hosting | GitHub Pages + Cloudflare-DNS (CNAME) | identisches Muster wie `tisch7.christianaust.eu` |
 
 ## Verzeichnisse
 
 ```
-index.html                 App-Shell, Schrittfolge Stammdaten → Sendung → Ladeplan
+index.html                 App-Shell: Planeransicht und Stammdatenansicht
 assets/css/app.css         Branding (dunkel, Orange-Akzent), Druckstile
 assets/logo/               CA-Signet und Favicons
 js/app.js                  Zustand, Ereignisse, Oberfläche
@@ -33,6 +45,7 @@ js/ldm-core.js             Rechenkern — ohne DOM, ohne Stammdaten, vollständi
 js/masterdata.js           Bestand, Variantenbildung, Suche
 js/validate.js             Validierung und Zahlformate
 js/import-csv.js           CSV lesen und schreiben, Header-Erkennung, Spaltenzuordnung
+js/xlsx-reader.js          XLSX lesen (ZIP + Deflate + XML), ohne Fremdbibliothek
 js/storage.js              localStorage, Export/Import/Reset, Datei-Download
 js/render-plan.js          Draufsicht und Seitenansicht als Inline-SVG
 js/render-result.js        Kennzahlen, Hinweise, Ladepläne, Rechenweg, Vergleich
@@ -97,15 +110,25 @@ Teilen sich Träger mit unterschiedlichem Gewicht eine Grundfläche, rechnet die
 Verteilung je Fahrzeug mit dem Mittelwert der Gruppe; die Gesamtsumme bleibt
 exakt. **Keine** Achslastberechnung, **keine** Aussage zur Ladungssicherung.
 
-## XLSX — bewusst nicht in V1
+## XLSX ohne Fremdbibliothek
 
-CSV deckt den Anwendungsfall ab und kostet keine Abhängigkeit. XLSX bräuchte
-SheetJS: rund 900 kB, eigene CVE-Historie, Lizenzwechsel in der Vergangenheit.
-Das widerspricht dem Grundsatz „null Laufzeitabhängigkeiten“ für einen Nutzen,
-den ein Export aus Excel nach CSV in zwei Klicks ebenfalls liefert.
-Der Import erkennt Trennzeichen und Spalten selbsttätig, damit genau dieser Weg
-bequem bleibt. Sollte XLSX später kommen: lokal vendored, Version fix,
-Lizenz- und CVE-Stand dokumentiert.
+Excel-Dateien sind in der Praxis der Normalfall für Behälterstammdaten, also
+liest der Planer sie direkt. Statt SheetJS (rund 900 kB, eigene CVE-Historie,
+Lizenzwechsel in der Vergangenheit) nutzt `js/xlsx-reader.js`, was der Browser
+mitbringt:
+
+- **ZIP**: Zentralverzeichnis und lokale Header werden selbst gelesen
+- **Deflate**: native `DecompressionStream('deflate-raw')`
+- **XML**: schlanker Parser für `sharedStrings`, `row` und `c`
+
+Damit bleibt der Grundsatz „keine Laufzeitabhängigkeiten" erhalten — es gibt
+keine Fremdlizenz, keine Version zu pflegen und nichts nachzuladen. Rund
+190 Zeilen eigener Code statt eines Pakets.
+
+Bewusste Grenzen: nur das erste Tabellenblatt, keine Datumsformatierung
+(Datumswerte kommen als Zahl), kein ZIP64, keine verschlüsselten Dateien.
+Fehlt `DecompressionStream` im Browser, sagt die App das und verweist auf CSV.
+Für Stammdaten aus einer Excel-Liste reicht das.
 
 ## Hosting
 

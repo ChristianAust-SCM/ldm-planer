@@ -6,7 +6,7 @@ Teil der persönlichen Ideenschmiede auf [christianaust.eu](https://christianaus
 
 ## Was es tut
 
-Ladungsträger erfassen oder importieren, Sendung zusammenstellen, Ladeplan rechnen:
+Fahrzeug wählen, Ladung erfassen, Ladeplan rechnen:
 Lademeter, Stellplätze, Stapelung, Verteilung auf mehrere Fahrzeuge, Auslastung,
 Restkapazität und Gewicht — mit Draufsicht, Seitenansicht, Stapelfaktorvergleich
 und nachvollziehbarem Rechenweg.
@@ -22,11 +22,15 @@ Siehe [docs/DATENSCHUTZ.md](docs/DATENSCHUTZ.md).
 
 ## Ablauf
 
-1. **Stammdaten** — manuell anlegen, CSV oder JSON importieren oder neutrale
-   Beispieldaten laden. Export und vollständiges Zurücksetzen jederzeit möglich.
-2. **Sendung** — Fahrzeug wählen oder Innenmaße frei eintragen, Positionen über
-   Schnellerfassung, Auswahl oder eingefügte Versandliste erfassen.
-3. **Ladeplan** — Kennzahlen, Hinweise, Ladeplan je Fahrzeug, Rechenweg, Druck.
+1. **Fahrzeug** — Vorlage wählen oder Innenmaße frei eintragen, Nutzlast optional.
+2. **Ladung erfassen** — Maße, Menge und Stapelfaktor genügen. Wer will, übernimmt
+   die Werte aus eigenen Stammdaten.
+3. **Ladeplan berechnen** — Kennzahlen, Hinweise, Draufsicht, Seitenansicht,
+   Rechenweg, Stapelfaktorvergleich, Druck.
+
+**Stammdaten sind optional.** Sie liegen in einer eigenen Ansicht und lassen sich
+manuell pflegen, aus Excel (.xlsx) oder CSV importieren, exportieren und
+vollständig zurücksetzen — nötig sind sie für keinen Schritt.
 
 ## Hinweis
 

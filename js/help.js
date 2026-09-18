@@ -10,10 +10,6 @@ export const HILFE = {
     '<p>Ein Lademeter ist ein laufender Meter Ladefläche über die <b>volle Fahrzeugbreite</b>. Zwei Ladungsträger von 1,20 m nebeneinander ergeben zusammen einen Lademeter, nicht zwei.</p>'
     + '<p><b>Abweichung zum Spediteur:</b> Viele Speditionen runden je Position auf halbe oder volle Meter auf. Hier werden erst alle Stellplätze zusammengezählt und dann gerundet. Bei Sendungen mit vielen kleinen Positionen macht das schnell ein bis zwei Meter Unterschied.</p>'],
 
-  fahrzeug: ['Innenmaße',
-    '<p>Gemeint sind die <b>Innenmaße der Ladefläche</b>, nicht die Fahrzeugaußenmaße. Die Höhe begrenzt den Stapelfaktor: Passt der deklarierte Stapel nicht unter das Dach, wird er automatisch reduziert und ein Hinweis erscheint.</p>'
-    + '<p>Die Vorlagen sind Richtwerte und gelten nicht für jedes reale Fahrzeug. Bei abweichenden Fahrzeugen die Werte direkt überschreiben – die Auswahl springt dann auf „Freie Maße“.</p>'],
-
   nutzlast: ['Nutzlast',
     '<p>Optional. Ist eine Nutzlast hinterlegt, wird das geplante Gewicht je Fahrzeug dagegen geprüft und bei Überschreitung gewarnt.</p>'
     + '<p>Die Verteilung auf die Fahrzeuge richtet sich weiterhin nach der <b>Ladelänge</b>, nicht nach dem Gewicht. Bei einer Warnung die Positionen manuell umverteilen.</p>'
@@ -23,7 +19,7 @@ export const HILFE = {
     '<p>Die <b>Obergrenze</b>, nicht die tatsächliche Stapelhöhe. Der Wert sagt: höchstens so viele Träger dürfen übereinander stehen. Er stammt aus den Stammdaten und gehört zur gewählten Variante – deshalb steht er hier nur zum Ablesen.</p>'
     + '<p><b>Beispiel:</b> 2 Stück bei max. 3 ergeben <i>einen</i> Stapel mit 2 Stück – nicht drei. 4 Stück ergeben zwei Stapel: einen mit 3, einen mit 1. Was wirklich steht, zeigen der Ladeplan und die Spalte Stellplätze.</p>'
     + '<p>Die Grenze wird automatisch gesenkt, wenn die Innenhöhe des Fahrzeugs nicht reicht.</p>'
-    + '<p><b>Weniger stapelbar als in den Stammdaten?</b> Etwa weil die Beladung es nicht zulässt: die Position als Sonderladungsträger anlegen, dieselben Maße eintragen und den Stapel dort frei setzen.</p>'],
+    + '<p>Der Wert lässt sich je Position frei ändern — etwa wenn die Beladung weniger zulässt, als die Stammdaten hergeben.</p>'],
 
   stellplatz: ['Stellplätze',
     '<p>Ein Stellplatz ist die Grundfläche für <b>einen Stapel</b>. Menge geteilt durch die Obergrenze, aufgerundet – der Rest bleibt ein angebrochener Stapel.</p>'
@@ -43,24 +39,19 @@ export const HILFE = {
     + '<p>Nützlich, wenn eine Sendung ohnehin fährt und Restplatz genutzt werden soll.</p>'],
 
   gewicht: ['Gewicht',
-    '<p>Summe aus Menge × Einzelgewicht der erfassten Positionen. Ohne gepflegtes Gewicht in den Stammdaten bleibt der Wert 0.</p>'
+    '<p>Summe aus Menge × Einzelgewicht der erfassten Positionen.</p>'
     + '<p>Teilen sich mehrere Träger mit unterschiedlichem Gewicht eine Grundfläche, rechnet die Verteilung je Fahrzeug mit dem <b>Mittelwert</b> der Gruppe. Die Gesamtsumme bleibt davon unberührt und ist exakt.</p>'],
 
-  nummer: ['Schnellerfassung',
-    '<p>ID, Bezeichnung oder Maß eintippen – die passende Variante wird gesucht. Mehrere Stammdatensätze mit identischen Maßen und identischem Stapelfaktor bilden <b>eine</b> Variante, weil sie sich gleich rechnen.</p>'
-    + '<p>Wer die ID kennt, tippt sie hier ein. Wer nicht, wählt in der Zeile über die Grundfläche. Für die Rechnung zählen nur Maße, Stapelfaktor und Gewicht.</p>'],
-
-  sonder: ['Sonderladungsträger',
-    '<p>Für alles, was nicht in den Stammdaten steht: Länge, Breite, Höhe und Gewicht frei eintragen, Stapelfaktor selbst setzen.</p>'
-    + '<p>Sonderpositionen mischen sich normal mit Stammdatenpositionen. Stimmt die Grundfläche überein, werden beide zusammen gerechnet – dann gilt der kleinere der beiden Stapelwerte.</p>'
-    + '<p>Auch der Weg, um einen Träger aus den Stammdaten ausnahmsweise niedriger zu stapeln.</p>'],
+  nummer: ['Aus Stammdaten übernehmen',
+    '<p>ID, Bezeichnung oder Maß eintippen – der passende Ladungsträger wird gesucht und mit Maßen, Gewicht und Stapelfaktor übernommen. Danach nur noch Menge und gewünschten Stapelfaktor setzen.</p>'
+    + '<p>Ein Komfortweg, keine Voraussetzung: Ohne Stammdaten wird dieselbe Position unter „Manuell eingeben“ in wenigen Sekunden erfasst. Für die Rechnung zählen nur Maße, Stapelfaktor und Gewicht.</p>'],
 
   mischhoehen: ['Mischhöhen',
     '<p>Mehrere Höhen auf derselben Grundfläche. Gerechnet wird mit dem <b>höchsten Träger</b> und dem <b>kleinsten Stapelfaktor</b> der Gruppe – im Zweifel zu Ihren Ungunsten, aber nie zu knapp.</p>'
     + '<p>Wird in der Praxis nicht gemischt gestapelt, die Positionen auf getrennte Grundflächen aufteilen oder den Stapel je Zeile korrigieren.</p>'],
 
   import: ['Stammdaten importieren',
-    '<p>CSV mit Kopfzeile. Trennzeichen (Semikolon, Komma, Tabulator) und Spalten werden automatisch erkannt – die Zuordnung lässt sich vor der Übernahme korrigieren.</p>'
+    '<p>Excel-Datei (.xlsx) oder CSV mit Kopfzeile. Trennzeichen und Spalten werden automatisch erkannt – die Zuordnung lässt sich vor der Übernahme korrigieren.</p>'
     + '<p>Pflicht sind ID, Bezeichnung, Länge, Breite, Höhe und Stapelfaktor. Gewicht und Kategorie sind optional. Maße in mm, Gewicht in kg.</p>'
     + '<p>Die Datei wird <b>im Browser</b> gelesen und nirgendwohin übertragen.</p>']
 }

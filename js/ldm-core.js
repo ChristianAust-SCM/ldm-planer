@@ -8,7 +8,13 @@
  * optionale Nutzlastprüfung).
  */
 
-export const FARBEN = ['#E87722', '#3E9BD6', '#59B87A', '#B98BD9', '#D9C34A'];
+/*
+ * Kategoriale Palette für die Ladeplanflächen, geprüft gegen helle Fläche:
+ * Helligkeitsband, Chroma, Farbfehlsichtigkeit und Normalsicht-Abstand bestanden;
+ * jede Farbe trägt weiße Beschriftung mit mindestens 4,1 : 1.
+ * Reihenfolge ist fest — Farben werden nie neu verteilt.
+ */
+export const FARBEN = ['#C4611A', '#2D6FA8', '#2F7D52', '#6B4E9E', '#9A6B0A'];
 
 /* Beste Ausrichtung: minimale tatsächliche Ladelänge für die Stellplatzzahl */
 export function ausrichtung(l, b, innenBreite, stellplaetze) {

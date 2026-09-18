@@ -7,3 +7,5 @@ node_modules/
 data/kunden-*
 data/*-privat.*
 *.xlsx
+# Testdatei fuer den XLSX-Import gehoert dazu (generisch, keine Kundendaten)
+!tests/fixtures/*.xlsx

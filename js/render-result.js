@@ -8,35 +8,71 @@ import { planen, stapelText, restText } from './ldm-core.js'
 import { svgDraufsicht, svgSeite } from './render-plan.js'
 import { HB } from './help.js'
 
-export function kennzahlen(p, fahrzeugName) {
+export function kennzahlen(p, fahrzeugName, { ohneGewicht = 0 } = {}) {
   const anzahl = p.lkw.length
   const auslGes = anzahl ? p.gesamt / (anzahl * p.kapa) : 0
   const letzter = anzahl ? p.lkw[anzahl - 1] : null
-  const gewichtKarte = p.nutzlast > 0
-    ? `<div class="kpi${p.ueberladen ? ' warn' : ''}"><div class="k">Gewicht${HB('gewicht')}</div><div class="v">${n0(p.gewicht)}</div>
-        <div class="s">kg von ${n0(p.nutzlast * Math.max(anzahl, 1))} kg zulässig</div></div>`
-    : `<div class="kpi"><div class="k">Gewicht${HB('gewicht')}</div><div class="v">${n0(p.gewicht)}</div>
-        <div class="s">kg gesamt · keine Nutzlast gesetzt</div></div>`
+
+  /* Nutzlast: eigener Status statt einer Zahl, die man erst deuten muss */
+  let last
+  if (!p.nutzlast) {
+    last = `<div class="kpi"><div class="k">Nutzlast${HB('nutzlast')}</div><div class="v klein">nicht gesetzt</div>
+      <div class="s">Beim Fahrzeug eintragen, dann wird geprüft</div></div>`
+  } else if (p.ueberladen) {
+    const schlimmster = p.lkw.reduce((a, t) => Math.max(a, t.gewicht - p.nutzlast), 0)
+    last = `<div class="kpi warn"><div class="k">Nutzlast${HB('nutzlast')}</div><div class="v klein">überschritten</div>
+      <div class="s">bis zu ${n0(schlimmster)} kg über ${n0(p.nutzlast)} kg</div></div>`
+  } else {
+    const engste = p.lkw.reduce((a, t) => Math.min(a, t.nutzlastFrei ?? Infinity), Infinity)
+    last = `<div class="kpi gut"><div class="k">Nutzlast${HB('nutzlast')}</div><div class="v klein">eingehalten</div>
+      <div class="s">${Number.isFinite(engste) ? n0(engste) + ' kg frei' : ''} von ${n0(p.nutzlast)} kg</div></div>`
+  }
+
+  const gewichtZusatz = ohneGewicht
+    ? `${n0(ohneGewicht)} ${ohneGewicht === 1 ? 'Position' : 'Positionen'} ohne Gewicht`
+    : 'kg gesamt'
 
   return `
-    <div class="kpi"><div class="k">Ladelänge${HB('ldm')}</div><div class="v">${n2(p.gesamt)}</div>
-      <div class="s">von ${n2(anzahl * p.kapa || p.kapa)} m verfügbar</div></div>
     <div class="kpi"><div class="k">Benötigte Fahrzeuge</div><div class="v">${anzahl}</div>
       <div class="s">${esc(fahrzeugName)}</div></div>
     <div class="kpi"><div class="k">Auslastung${HB('auslastung')}</div><div class="v">${n1(auslGes * 100)}&thinsp;%</div>
       <div class="s">${n0(p.stueck)} Ladungsträger</div></div>
-    <div class="kpi accent"><div class="k">Frei auf letztem Fzg.${HB('rest')}</div><div class="v">${letzter ? n2(letzter.rest) : '0,00'}</div>
-      <div class="s">Meter Ladelänge</div></div>
-    ${gewichtKarte}`
+    <div class="kpi"><div class="k">Benötigte LDM${HB('ldm')}</div><div class="v">${n2(p.gesamt)}</div>
+      <div class="s">von ${n2(anzahl * p.kapa || p.kapa)} m verfügbar</div></div>
+    <div class="kpi accent"><div class="k">Rest-LDM${HB('rest')}</div><div class="v">${letzter ? n2(letzter.rest) : '0,00'}</div>
+      <div class="s">auf dem letzten Fahrzeug</div></div>
+    <div class="kpi"><div class="k">Gesamtgewicht${HB('gewicht')}</div><div class="v">${n0(p.gewicht)}</div>
+      <div class="s">${esc(gewichtZusatz)}</div></div>
+    ${last}`
 }
 
+const notiz = h => `<div class="note ${h.t}"><b>${esc(h.k)}`
+  + `${h.k === 'Mischhöhen' ? HB('mischhoehen') : ''}${h.k === 'Nutzlast' ? HB('nutzlast') : ''}</b>`
+  + `<span>${esc(h.s)}</span></div>`
+
+/**
+ * Warnungen und Fehler stehen immer offen. Die vielen Hinweise zur Ausnutzung
+ * würden bei zahlreichen Grundflächen den Ladeplan verdrängen — sie wandern
+ * deshalb ab vier Stück in eine aufklappbare Liste.
+ */
 export function hinweise(p) {
   if (!p.hinweise.length) return ''
-  return p.hinweise.map(h => `<div class="note ${h.t}"><b>${esc(h.k)}${h.k === 'Mischhöhen' ? HB('mischhoehen') : ''}${h.k === 'Nutzlast' ? HB('nutzlast') : ''}</b><span>${esc(h.s)}</span></div>`).join('')
+  const wichtig = p.hinweise.filter(h => h.t !== 'info')
+  const info = p.hinweise.filter(h => h.t === 'info')
+  const oben = wichtig.map(notiz).join('')
+  if (info.length <= 3) return oben + info.map(notiz).join('')
+  return oben + `<details class="hinweisbox">
+    <summary>${n0(info.length)} Hinweise zur Ausnutzung</summary>
+    <div class="hinweisliste">${info.map(notiz).join('')}</div>
+  </details>`
 }
 
-const legende = g => `<span><i style="background:${g.farbe}"></i>${esc(gName(g))} &#183; `
-  + `${n0(g.menge)} Stück auf ${n0(g.stellplaetze)} Stellpl. &#183; ${esc(stapelText(g))}</span>`
+const legende = g => {
+  const namen = [...g.namen].filter(Boolean)
+  const titel = namen.length === 1 ? namen[0] : namen.length > 1 ? `${namen[0]} +${namen.length - 1}` : gName(g)
+  return `<span><i style="background:${g.farbe}"></i><b>${esc(titel)}</b> &#183; ${esc(gName(g))} &#183; `
+    + `${n0(g.menge)} Stück auf ${n0(g.stellplaetze)} Stellpl. &#183; ${esc(stapelText(g))}</span>`
+}
 
 export function ladeplaene(p) {
   if (!p.lkw.length) {
@@ -63,7 +99,7 @@ export function ladeplaene(p) {
         ${t.reihen.map(r => `<div style="background:${r.g.farbe};width:${(r.tief / p.kapa * 100).toFixed(3)}%"></div>`).join('')}
         ${t.rest > 0.005 ? `<div class="barfrei" style="width:${(t.rest / p.kapa * 100).toFixed(3)}%"></div>` : ''}
       </div>
-      <div class="tscroll">${svgDraufsicht(t, p.kapa, p.f.b / 1000)}${svgSeite(t, p.kapa, p.f.h / 1000)}</div>
+      <div class="tscroll" data-scrollhinweis>${svgDraufsicht(t, p.kapa, p.f.b / 1000)}${svgSeite(t, p.kapa, p.f.h / 1000)}</div>
       <div class="legend">${p.gruppen.filter(g => t.reihen.some(r => r.g === g)).map(legende).join('')}
         <span><i class="ifrei"></i>ungenutzt</span></div>
       <div class="note info" style="margin-top:12px"><b>Restkapazität</b><span>${esc(restText(t, p.gruppen))}</span></div>
