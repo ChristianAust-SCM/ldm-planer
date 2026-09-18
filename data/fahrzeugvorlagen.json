@@ -1,0 +1,10 @@
+{
+  "hinweis": "Neutrale Richtwerte. Innenmasse realer Fahrzeuge weichen ab und muessen immer geprueft werden. Alle Werte sind in der App ueberschreibbar.",
+  "version": 1,
+  "fahrzeuge": [
+    { "id": "curtainsider-mega",  "bezeichnung": "Curtainsider Mega",        "innenlaenge_mm": 13620, "innenbreite_mm": 2480, "innenhoehe_mm": 3000, "nutzlast_kg": 24000 },
+    { "id": "sattelauflieger",    "bezeichnung": "Standard-Sattelauflieger", "innenlaenge_mm": 13620, "innenbreite_mm": 2480, "innenhoehe_mm": 2700, "nutzlast_kg": 24000 },
+    { "id": "wechselbruecke",     "bezeichnung": "Wechselbruecke C745",      "innenlaenge_mm":  7450, "innenbreite_mm": 2480, "innenhoehe_mm": 2700, "nutzlast_kg": 16000 },
+    { "id": "frei",               "bezeichnung": "Freie Masse",              "innenlaenge_mm":     0, "innenbreite_mm":    0, "innenhoehe_mm":    0, "nutzlast_kg":     0 }
+  ]
+}

@@ -1,0 +1,3 @@
+id;bezeichnung;laenge_mm;breite_mm;hoehe_mm;gewicht_kg;stapelfaktor_max;kategorie
+EP-01;Europalette, beladen;1200;800;1000;400;2;Palette
+GB-01;Gitterbox;1240;835;970;700;3;Gitterbox

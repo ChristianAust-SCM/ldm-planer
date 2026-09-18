@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+*.log
+.env
+.env.*
+# keine kundenspezifischen Stammdaten ins Repo
+data/kunden-*
+data/*-privat.*
+*.xlsx
