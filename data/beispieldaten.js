@@ -9,14 +9,3 @@ export const BEISPIEL_LADUNGSTRAEGER = [
   { id: 'KLT-01', bezeichnung: 'Kleinladungsträger',        laenge_mm:  600, breite_mm:  400, hoehe_mm:  280, gewicht_kg:  25, stapelfaktor_max: 5, kategorie: 'Behälter' },
   { id: 'BEH-01', bezeichnung: 'Behälter groß',             laenge_mm: 1200, breite_mm: 1000, hoehe_mm:  750, gewicht_kg: 300, stapelfaktor_max: 2, kategorie: 'Behälter' }
 ]
-
-/*
- * Neutrale Fahrzeugvorlagen. Innenmaße realer Fahrzeuge weichen ab und müssen
- * immer geprüft werden. Alle Werte sind in der App überschreibbar.
- */
-export const FAHRZEUGVORLAGEN = [
-  { id: 'mega',   bezeichnung: 'Curtainsider Mega',        l: 13600, b: 2440, h: 3000, nutzlast: 24000 },
-  { id: 'std',    bezeichnung: 'Standard-Sattelauflieger', l: 13600, b: 2440, h: 2700, nutzlast: 24000 },
-  { id: 'wb',     bezeichnung: 'Wechselbrücke 7,45 m',     l:  7450, b: 2480, h: 2700, nutzlast: 16000 },
-  { id: 'custom', bezeichnung: 'Freie Maße',               l: 13600, b: 2440, h: 3000, nutzlast: 0 }
-]

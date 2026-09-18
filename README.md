@@ -27,7 +27,10 @@ Siehe [docs/DATENSCHUTZ.md](docs/DATENSCHUTZ.md).
 
 ## Ablauf
 
-1. **Fahrzeug** — Vorlage wählen oder Innenmaße frei eintragen, Nutzlast optional.
+1. **Fahrzeug** — aus der Bibliothek recherchierter Konfigurationen wählen
+   (Transporter, Planensprinter, Koffer-LKW, Sattelauflieger, Wechselsysteme)
+   oder Innenmaße frei eintragen. Jede Vorlage zeigt Status, Besonderheiten und
+   Quelle; Nutzlast steht nur dort, wo der Hersteller sie belegt.
 2. **Ladung erfassen** — Maße, Menge und Stapelfaktor genügen. Wer will, übernimmt
    die Werte aus eigenen Stammdaten.
 3. **Ladeplan berechnen** — Kennzahlen, Hinweise, Draufsicht, Seitenansicht,
@@ -57,3 +60,4 @@ bewusst keine Abhängigkeiten.
 
 Aufbau, Datenmodell und Rechenkern: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md).
 Herkunft und Bereinigung: [docs/HERKUNFT.md](docs/HERKUNFT.md).
+Fahrzeugvorlagen und ihre Quellen: [docs/FAHRZEUGVORLAGEN.md](docs/FAHRZEUGVORLAGEN.md).

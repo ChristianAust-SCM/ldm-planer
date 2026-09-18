@@ -49,6 +49,7 @@ Ein Kundenname war in der Referenzdatei nicht enthalten; geprüft wurde trotzdem
 - XLSX-Import über einen eigenen Leser, ohne Fremdbibliothek
 - klassische LDM-Kennzahl neben der Ladelänge, beide im Rechenweg hergeleitet
 - Längenprüfung des Fahrzeugs (die Ursprungsfassung prüfte nur die Breite)
+- Fahrzeugbibliothek aus recherchierten realen Konfigurationen mit Quellenangabe
 - Positionen bearbeiten, duplizieren, löschen
 - Tests: Logik (`node:test`) und Browserabnahme (Playwright)
 

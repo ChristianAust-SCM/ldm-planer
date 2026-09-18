@@ -34,6 +34,8 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+/* Eigene display-Regeln schlagen sonst die Browserregel für [hidden] */
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -165,6 +167,68 @@ select {
 }
 .btn-haupt:hover:not(:disabled) { background: #F5892F; }
 .btn-haupt:active:not(:disabled) { transform: translateY(1px); }
+
+/* ------------------------------------------------- Fahrzeugkarte */
+
+.fzg-karte {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 13px 15px;
+  background: var(--silber-2);
+  border: 1px solid var(--linie);
+  border-radius: 10px;
+}
+/* Sobald eigene Silhouetten existieren, wird dieses Feld eingeblendet */
+.fzg-karte:has(.fzg-bild:not([hidden])) { grid-template-columns: 104px 1fr; }
+.fzg-bild {
+  background: #fff; border: 1px solid var(--linie); border-radius: 8px;
+  aspect-ratio: 16 / 10; display: flex; align-items: center; justify-content: center;
+}
+
+.fzg-kopf { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.fzg-kopf h3 { font-size: 14.5px; color: var(--navy); }
+.fzg-kat { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); margin-top: 1px; }
+
+.badge {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700;
+  padding: 2px 8px; border-radius: 20px; border: 1px solid transparent; white-space: nowrap;
+}
+.badge-konkret   { background: rgba(47,125,82,.10);  color: var(--gruen);    border-color: rgba(47,125,82,.30); }
+.badge-richtwert { background: rgba(232,119,34,.10); color: var(--orange-t); border-color: rgba(232,119,34,.35); }
+.badge-frei      { background: var(--silber);        color: var(--ink-2);    border-color: var(--linie-2); }
+
+.fzg-daten { display: flex; flex-wrap: wrap; gap: 6px 26px; margin-top: 10px; }
+.fzg-daten dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.fzg-daten dd { font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.fzg-daten .mini { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: normal; }
+
+.fzg-merkmale { margin: 10px 0 0 16px; font-size: 12.5px; color: var(--ink-2); }
+.fzg-merkmale li { margin-bottom: 2px; }
+
+/* Hinweise der Fahrzeugkarte sind Einordnung, keine Fehlermeldung */
+.fzg-hinweis {
+  display: flex; gap: 9px; margin-top: 10px; padding: 8px 11px;
+  border-radius: 8px; font-size: 12.5px; border: 1px solid var(--linie);
+}
+.fzg-hinweis b { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; padding-top: 2px; }
+.fzg-hinweis span { color: var(--ink-2); }
+.fzg-hinweis.richtwert { background: #FFF8F2; border-color: rgba(232,119,34,.30); }
+.fzg-hinweis.richtwert b { color: var(--orange-t); }
+.fzg-hinweis.radkasten { background: #fff; border-color: var(--linie-2); }
+.fzg-hinweis.radkasten b { color: var(--ink-2); }
+
+.fzg-akt { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+.quelle > summary { cursor: pointer; font-size: 12px; color: var(--ink-3); list-style: none; }
+.quelle > summary::-webkit-details-marker { display: none; }
+.quelle > summary::before { content: "▸ "; }
+.quelle[open] > summary::before { content: "▾ "; }
+.quelle > summary:hover { color: var(--orange-t); }
+.quelle-inhalt { margin-top: 8px; font-size: 12px; color: var(--ink-2); }
+.quelle-inhalt p + p { margin-top: 6px; }
+.quelle-inhalt b { color: var(--ink); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; }
+.quelle-inhalt .mini { color: var(--ink-3); font-size: 11.5px; }
 
 /* ------------------------------------------------------------ Reiter */
 
@@ -397,7 +461,9 @@ footer b { color: var(--ink-2); }
   .claim { color: var(--ink-2); }
   .signet { filter: grayscale(1) brightness(.4); }
   .noprint, .reiter, #erfassenKarte, .platzhalter { display: none !important; }
-  #fzg, label[for="fzg"] { display: none !important; }
+  #fzg, label[for="fzg"], .fzg-akt { display: none !important; }
+  #masseBox { display: grid !important; }
+  .fzg-karte { background: #fff; border-color: #C9D2DA; }
   .hinweisbox > summary { display: none; }
   .hinweisliste { display: block !important; padding: 0; }
   .wrap { max-width: none; padding: 0; }

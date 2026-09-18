@@ -1,6 +1,6 @@
 # LAB 01 · LDM Planer — Architektur
 
-Stand: 2026-09-18 · Status: **V1 nach Berechnungs-Audit, Tests grün**
+Stand: 2026-09-18 · Status: **V1.1 mit Fahrzeugbibliothek, Tests grün**
 
 ## Zweck
 
@@ -51,7 +51,8 @@ js/render-plan.js          Draufsicht und Seitenansicht als Inline-SVG
 js/render-result.js        Kennzahlen, Hinweise, Ladepläne, Rechenweg, Vergleich
 js/help.js                 Erklärungen an Ort und Stelle
 js/format.js               Zahlformate und kleine Helfer
-data/beispieldaten.js      neutrale Beispiel-Ladungsträger und Fahrzeugvorlagen
+data/beispieldaten.js      neutrale Beispiel-Ladungsträger
+data/fahrzeuge.js          recherchierte Fahrzeugbibliothek (siehe FAHRZEUGVORLAGEN.md)
 data/import-vorlage.csv    Vorlage für den CSV-Import
 tests/                     node:test (Logik) und browser.mjs (Playwright)
 docs/                      diese Dokumente
@@ -75,9 +76,23 @@ Zahlen werden in deutscher und englischer Schreibweise angenommen
 
 ## Datenmodell Fahrzeug
 
-`l`, `b`, `h` (Innenmaße in mm, Pflicht) und `nutzlast` (kg, optional).
-Vorlagen sind Richtwerte und vollständig überschreibbar; weicht ein Wert ab,
-springt die Auswahl selbsttätig auf „Freie Maße“.
+Der Planer rechnet mit `l`, `b`, `h` (Innenmaße in mm) und `nutzlast` (kg,
+optional). Die Bibliothek in `data/fahrzeuge.js` liefert dazu Herkunft und
+Einordnung: `status` (`konkret` / `richtwert` / `frei`), `radkaesten`,
+`ladehoehe`, `planenart`, `ladebordwand`, `portalhoehe`, `durchladehoehe`,
+`breiteZwischenRadkaesten`, `besonderheiten`, `quelle` — und `palettenplaetze`,
+das bewusst überall `null` bleibt. Woher jede Vorlage stammt, steht in
+[FAHRZEUGVORLAGEN.md](FAHRZEUGVORLAGEN.md).
+
+Vorlagen sind **Startwerte** und vollständig überschreibbar. Weichen die Maße ab,
+springt die Auswahl selbsttätig auf „Freie Maße“: die Zahlen gehören dann dem
+Nutzer, nicht mehr der Herstellerquelle. Mehrere Vorlagen dürfen dieselbe
+Geometrie haben (M6 und TA6 messen beide 4.300 × 2.030 × 2.000 mm) — deshalb
+bleibt die gewählte Vorlage erhalten, solange ihre Maße passen.
+
+Die rechteckige Ladeflächenrechnung bildet **Radkästen nicht ab**. Vorlagen mit
+`radkaesten: true` weisen in der Fahrzeugkarte darauf hin; die Packengine wurde
+dafür bewusst nicht verändert.
 
 ## Rechenkern
 

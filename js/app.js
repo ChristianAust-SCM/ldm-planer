@@ -14,13 +14,15 @@ import { leseXlsxZeilen, xlsxUnterstuetzt } from './xlsx-reader.js'
 import { planen } from './ldm-core.js'
 import * as R from './render-result.js'
 import { verbinde as hilfeVerbinden } from './help.js'
-import { BEISPIEL_LADUNGSTRAEGER, FAHRZEUGVORLAGEN } from '../data/beispieldaten.js'
+import { BEISPIEL_LADUNGSTRAEGER } from '../data/beispieldaten.js'
+import { FAHRZEUGE, KATEGORIEN, NICHT_UNTERSTUETZT, ALTE_IDS, fahrzeugOf } from '../data/fahrzeuge.js'
 
 const $ = id => document.getElementById(id)
 
 /* ---------------- Zustand ---------------- */
 
-let fahrzeug = { typ: 'mega', l: 13600, b: 2440, h: 3000, nutzlast: 0 }
+const START_FAHRZEUG = 'krone_mega_liner_3000'
+let fahrzeug = standardFahrzeug()
 let positionen = []
 let lfdId = 1
 let berechnet = false
@@ -33,8 +35,8 @@ export function start() {
   const stamm = S.lies(S.SCHLUESSEL.stammdaten, null)
   M.setzeBestand(Array.isArray(stamm) ? stamm : [])
 
-  const gf = S.lies(S.SCHLUESSEL.fahrzeug, null)
-  if (gf && typeof gf === 'object') fahrzeug = { ...fahrzeug, ...gf }
+  fahrzeug = uebernehmeGespeichertesFahrzeug(S.lies(S.SCHLUESSEL.fahrzeug, null))
+  fahrzeug.typ = typNachMassaenderung()
 
   positionen = uebernehmeGespeicherteSendung(S.lies(S.SCHLUESSEL.sendung, null))
   lfdId = positionen.reduce((m, p) => Math.max(m, +p.id || 0), 0) + 1
@@ -43,6 +45,7 @@ export function start() {
   hilfeVerbinden()
   verbindeEreignisse()
   fuelleFahrzeugAuswahl()
+  masseSichtbar(fahrzeug.typ === 'frei')
   zeichneAlles()
   scrollhinweise()
 
@@ -94,14 +97,52 @@ function zeichneAlles() {
 
 /* ---------------- Fahrzeug ---------------- */
 
+function standardFahrzeug() {
+  const f = fahrzeugOf(START_FAHRZEUG)
+  return { typ: f.id, l: f.l, b: f.b, h: f.h, nutzlast: f.nutzlast || 0 }
+}
+
+/**
+ * Stände aus der ersten Fassung kannten die Vorlagen `mega`, `std`, `wb` und
+ * `custom`. Die Maße des Nutzers bleiben unangetastet; nur die Vorlagen-ID wird
+ * auf die recherchierte Nachfolgerin gehoben und anschließend neu abgeglichen.
+ */
+function uebernehmeGespeichertesFahrzeug(gespeichert) {
+  if (!gespeichert || typeof gespeichert !== 'object') return standardFahrzeug()
+  const f = { ...standardFahrzeug(), ...gespeichert }
+  f.typ = ALTE_IDS[f.typ] || f.typ
+  if (!fahrzeugOf(f.typ)) f.typ = 'frei'
+  return f
+}
+
 function fuelleFahrzeugAuswahl() {
-  $('fzg').innerHTML = FAHRZEUGVORLAGEN.map(f => `<option value="${f.id}">${esc(f.bezeichnung)}</option>`).join('')
+  const gruppen = KATEGORIEN.map(k => {
+    const eintraege = FAHRZEUGE.filter(f => f.kategorie === k.id)
+    if (!eintraege.length) return ''
+    return `<optgroup label="${esc(k.name)}">`
+      + eintraege.map(f => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('')
+      + '</optgroup>'
+  }).join('')
+
+  /* Nicht modellierbar, aber erwähnt — bewusst nicht wählbar */
+  const gesperrt = NICHT_UNTERSTUETZT.length
+    ? `<optgroup label="Noch nicht unterstützt">`
+      + NICHT_UNTERSTUETZT.map(x => `<option value="" disabled>${esc(x.name)} · ${esc(x.grund)}</option>`).join('')
+      + '</optgroup>'
+    : ''
+
+  $('fzg').innerHTML = gruppen + gesperrt
   $('fzg').value = fahrzeug.typ
+  schreibeMassfelder()
+}
+
+function schreibeMassfelder() {
   $('fL').value = fahrzeug.l
   $('fB').value = fahrzeug.b
   $('fH').value = fahrzeug.h
   $('fN').value = fahrzeug.nutzlast || ''
   zeigeLdm()
+  zeichneFahrzeugKarte()
 }
 
 function zeigeLdm() {
@@ -109,16 +150,28 @@ function zeigeLdm() {
 }
 
 function fahrzeugWechsel() {
-  const f = FAHRZEUGVORLAGEN.find(x => x.id === $('fzg').value)
-  if (f && f.id !== 'custom') {
-    fahrzeug = { typ: f.id, l: f.l, b: f.b, h: f.h, nutzlast: f.nutzlast }
-    $('fL').value = f.l; $('fB').value = f.b; $('fH').value = f.h; $('fN').value = f.nutzlast || ''
-  } else {
-    fahrzeug.typ = 'custom'
-  }
+  const f = fahrzeugOf($('fzg').value)
+  if (!f) return
+  fahrzeug = { typ: f.id, l: f.l, b: f.b, h: f.h, nutzlast: f.nutzlast || 0 }
+  /* Freie Maße öffnet die Felder, eine Vorlage lässt sie zugeklappt */
+  masseSichtbar(f.id === 'frei')
   S.schreib(S.SCHLUESSEL.fahrzeug, fahrzeug)
-  zeigeLdm()
+  schreibeMassfelder()
+  zeichneSendung()
   rechne()
+}
+
+/**
+ * Nach einer Maßänderung bleibt die gewählte Vorlage erhalten, solange ihre
+ * Maße noch passen — mehrere Vorlagen teilen sich dieselbe Geometrie
+ * (M6 und TA6 messen beide 4.300 × 2.030 × 2.000 mm).
+ */
+function typNachMassaenderung() {
+  const aktuell = fahrzeugOf(fahrzeug.typ)
+  const passt = f => f && f.id !== 'frei' && f.l === fahrzeug.l && f.b === fahrzeug.b && f.h === fahrzeug.h
+  if (passt(aktuell)) return aktuell.id
+  const treffer = FAHRZEUGE.find(passt)
+  return treffer ? treffer.id : 'frei'
 }
 
 function fahrzeugMassGeaendert() {
@@ -126,13 +179,69 @@ function fahrzeugMassGeaendert() {
   fahrzeug.b = +$('fB').value || 0
   fahrzeug.h = +$('fH').value || 0
   fahrzeug.nutzlast = +$('fN').value || 0
-  const passt = FAHRZEUGVORLAGEN.find(f => f.id !== 'custom'
-    && f.l === fahrzeug.l && f.b === fahrzeug.b && f.h === fahrzeug.h && f.nutzlast === fahrzeug.nutzlast)
-  fahrzeug.typ = passt ? passt.id : 'custom'
+  fahrzeug.typ = typNachMassaenderung()
   $('fzg').value = fahrzeug.typ
   S.schreib(S.SCHLUESSEL.fahrzeug, fahrzeug)
   zeigeLdm()
+  zeichneFahrzeugKarte()
   rechne()
+}
+
+const masseSichtbar = an => {
+  $('masseBox').hidden = !an
+  $('btnMasse').textContent = an ? 'Maße ausblenden' : 'Maße bearbeiten'
+  $('btnMasse').setAttribute('aria-expanded', String(an))
+}
+
+const STATUS_TEXT = {
+  konkret: 'Konkrete Vorlage',
+  richtwert: 'Richtwert',
+  frei: 'Eigene Maße'
+}
+
+function zeichneFahrzeugKarte() {
+  const f = fahrzeugOf(fahrzeug.typ) || fahrzeugOf('frei')
+  const kat = KATEGORIEN.find(k => k.id === f.kategorie)
+
+  $('fzgName').textContent = f.name
+  $('fzgKat').textContent = kat ? kat.name : ''
+  $('fzgStatus').textContent = STATUS_TEXT[f.status] || ''
+  $('fzgStatus').className = 'badge ' + (f.status === 'richtwert' ? 'badge-richtwert' : f.status === 'frei' ? 'badge-frei' : 'badge-konkret')
+
+  /* Weichen die Maße von der Vorlage ab, steht die Auswahl bereits auf „Freie Maße" */
+  $('fzgMasse').textContent = `${n0(fahrzeug.l)} × ${n0(fahrzeug.b)} × ${n0(fahrzeug.h)} mm`
+
+  $('fzgNutzlast').innerHTML = fahrzeug.nutzlast
+    ? `${n0(fahrzeug.nutzlast)} kg${f.nutzlastHinweis && fahrzeug.nutzlast === f.nutzlast ? `<span class="mini"> · ${esc(f.nutzlastHinweis)}</span>` : ''}`
+    : '<span class="leer-wert">nicht vorbelegt</span>'
+
+  $('fzgMerkmale').innerHTML = (f.besonderheiten || []).map(b => `<li>${esc(b)}</li>`).join('')
+
+  const warnungen = []
+  if (f.status === 'richtwert') {
+    warnungen.push(`<div class="fzg-hinweis richtwert"><b>Richtwert</b>
+      <span>Innenmaße vor Einsatz prüfen.${f.richtwertGrund ? ' ' + esc(f.richtwertGrund) : ''}</span></div>`)
+  }
+  if (f.radkaesten === true) {
+    warnungen.push(`<div class="fzg-hinweis radkasten"><b>Radkästen vorhanden</b>
+      <span>Die rechteckige Ladeflächenberechnung berücksichtigt die Radkästen derzeit nicht.
+      Nutzbare Fläche am konkreten Fahrzeug prüfen.</span></div>`)
+  }
+  $('fzgWarnung').innerHTML = warnungen.join('')
+
+  const box = $('fzgQuelleBox')
+  if (f.quelle) {
+    box.hidden = false
+    $('fzgQuelle').innerHTML = `
+      <p><b>Hersteller / Aufbau</b><br>${esc(f.aufbau)}</p>
+      <p><b>Konfiguration</b><br>${esc(f.name)}</p>
+      <p><b>Quelle</b><br>${esc(f.quelle.text)} ${esc(f.quelle.ref)}</p>
+      <p class="mini">Vollständige Zuordnung und Quellenliste: docs/FAHRZEUGVORLAGEN.md</p>`
+  } else {
+    box.hidden = true
+    box.open = false
+    $('fzgQuelle').innerHTML = ''
+  }
 }
 
 /* ---------------- Ladung erfassen ---------------- */
@@ -504,7 +613,7 @@ function allesZuruecksetzen() {
   positionen = []
   bearbeiteId = null
   berechnet = false
-  fahrzeug = { typ: 'mega', l: 13600, b: 2440, h: 3000, nutzlast: 0 }
+  fahrzeug = standardFahrzeug()
   S.alleLoeschen()
   fuelleFahrzeugAuswahl()
   zeichneAlles()
@@ -696,6 +805,11 @@ function verbindeEreignisse() {
   })
 
   $('fzg').addEventListener('change', fahrzeugWechsel)
+  $('btnMasse').addEventListener('click', () => {
+    const an = $('masseBox').hidden
+    masseSichtbar(an)
+    if (an) $('fL').focus()
+  })
   for (const id of ['fL', 'fB', 'fH', 'fN']) {
     $(id).addEventListener('change', fahrzeugMassGeaendert)
     $(id).addEventListener('input', () => { zeichneSendung() })

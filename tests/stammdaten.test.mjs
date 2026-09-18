@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { zahl, pruefeEintrag, pruefeListe } from '../js/validate.js'
 import { leseCsv, wendeAn, schreibeCsv, ordneZu, erkenneTrennzeichen } from '../js/import-csv.js'
 import * as M from '../js/masterdata.js'
-import { BEISPIEL_LADUNGSTRAEGER, FAHRZEUGVORLAGEN } from '../data/beispieldaten.js'
+import { BEISPIEL_LADUNGSTRAEGER } from '../data/beispieldaten.js'
 
 const gut = { id: 'A-1', bezeichnung: 'Palette', laenge_mm: 1200, breite_mm: 800, hoehe_mm: 1000, gewicht_kg: 400, stapelfaktor_max: 2 }
 
@@ -190,12 +190,4 @@ test('Beispieldaten sind vollständig, eindeutig und plausibel', () => {
   const pr = pruefeListe(BEISPIEL_LADUNGSTRAEGER)
   assert.equal(pr.abgelehnt.length, 0, JSON.stringify(pr.abgelehnt))
   assert.equal(pr.gueltig.length, BEISPIEL_LADUNGSTRAEGER.length)
-})
-
-test('Fahrzeugvorlagen sind plausibel und enthalten freie Maße', () => {
-  assert.ok(FAHRZEUGVORLAGEN.some(f => f.id === 'custom'))
-  for (const f of FAHRZEUGVORLAGEN) {
-    assert.ok(f.l > 0 && f.b > 0 && f.h > 0, `${f.id}: ungültige Innenmaße`)
-    assert.ok(f.nutzlast >= 0)
-  }
 })

@@ -67,6 +67,16 @@ async function main() {
     return m ? m[1] : null
   }
   const positionen = () => page.locator('#posBody tr').count()
+  /* Die Maßfelder sind bei gewählter Vorlage zugeklappt */
+  const masseOeffnen = async () => {
+    if (await page.locator('#masseBox').isHidden()) { await page.click('#btnMasse'); await warte(150) }
+  }
+  const fahrzeugMasse = async (l, b, h, nutzlast = '') => {
+    await masseOeffnen()
+    await page.fill('#fL', String(l)); await page.fill('#fB', String(b)); await page.fill('#fH', String(h))
+    await page.fill('#fN', String(nutzlast))
+    await page.locator('#fN').blur(); await warte(250)
+  }
   const leeren = async () => {
     if (!(await page.locator('#btnLeeren').isVisible())) {
       await page.click('#btnZurueckPlaner'); await warte(250)
@@ -88,7 +98,7 @@ async function main() {
     pruefe('Ergebnisbereich erklärt den Einstieg', /drei Schritten/.test(await page.locator('#ergebnisPlatzhalter').textContent()))
     pruefe('Rechnen ist ohne Position gesperrt', await page.locator('#btnRechnen').isDisabled())
 
-    await page.selectOption('#fzg', 'mega')
+    await fahrzeugMasse(13600, 2440, 3000)
     await manuell('Gitterbox', 1240, 835, 970, 700, 44, 3)
     pruefe('Position ohne Stammdaten angelegt', await positionen() === 1)
     pruefe('Rechnen ist jetzt möglich', await page.locator('#btnRechnen').isEnabled())
@@ -129,6 +139,7 @@ async function main() {
 
     /* ---------- H · Nutzlast überschritten ---------- */
     console.log('\nH · Nutzlast überschritten')
+    await masseOeffnen()
     await page.fill('#fN', '5000'); await page.locator('#fN').blur(); await warte(300)
     pruefe('Nutzlast-Kennzahl schlägt an', /überschritten/.test(await kpiText()))
     pruefe('Hinweis nennt die Überschreitung', /Nutzlast/.test(await page.locator('#hinweise').textContent()))
@@ -253,9 +264,7 @@ async function main() {
     await page.click('#btnZurueckPlaner'); await warte(250)
     await leeren()
     await page.click('#tab-manuell')
-    await page.selectOption('#fzg', 'mega')
-    await page.fill('#fN', '')
-    await page.locator('#fN').blur()
+    await fahrzeugMasse(13600, 2440, 3000)
     await manuell('Gitterbox', 1200, 1000, 1000, 88, 14, 3, '23655')
     await manuell('KLT 888', 1400, 800, 1000, 200, 12, 3)
     await page.click('#btnRechnen'); await warte(500)
@@ -310,6 +319,104 @@ async function main() {
       const zahl = x => Number(x.replace(/\./g, '').replace(',', '.'))
       return zahl(m[1]) <= zahl(m[2]) + 0.001
     }), belegt.join(' | '))
+
+    /* ---------- P · Fahrzeugbibliothek ---------- */
+    console.log('\nP · Fahrzeugbibliothek')
+    await leeren()
+    const gruppen = await page.evaluate(() => [...document.querySelectorAll('#fzg optgroup')].map(g => g.label))
+    pruefe('Kategorien statt langer Liste', gruppen.length >= 5, gruppen.join(' | '))
+    for (const k of ['Transporter & Express', 'LKW · Koffer & Plane', 'Sattelauflieger', 'Wechselsysteme', 'Sonderkonfiguration']) {
+      pruefe(`Kategorie „${k}"`, gruppen.includes(k), gruppen.join(' | '))
+    }
+    const optionen = await page.evaluate(() =>
+      [...document.querySelectorAll('#fzg option')].map(o => ({ v: o.value, t: o.textContent, aus: o.disabled })))
+    pruefe('14 Vorlagen plus freie Maße wählbar', optionen.filter(o => !o.aus).length === 15, String(optionen.filter(o => !o.aus).length))
+    pruefe('keine Dubletten in der Liste', new Set(optionen.map(o => o.t)).size === optionen.length)
+    pruefe('keine alten Vorlagen mehr', !optionen.some(o => ['mega', 'std', 'wb', 'custom'].includes(o.v)))
+    pruefe('kein Technoplan', !optionen.some(o => /technoplan/i.test(o.t)))
+    const jumbo = optionen.find(o => /Jumbo/i.test(o.t))
+    pruefe('Jumbo erwähnt, aber gesperrt', !!jumbo && jumbo.aus, JSON.stringify(jumbo))
+    pruefe('Jumbo nennt den Grund', !!jumbo && /zwei getrennte Ladeflächen/.test(jumbo.t))
+
+    /* Jede Vorlage auswählbar, Maße werden übernommen */
+    const erwartet = {
+      transit_l3h3_fwd_srw: [3533, 1784, 2125, ''],
+      transit_l4h3_rwd_awd: [4256, 1784, 2025, ''],
+      sprinter_schutz_m6_plane_2000: [4300, 2030, 2000, ''],
+      sprinter_schutz_ta6_plane_2000: [4300, 2030, 2000, ''],
+      sprinter_schutz_ta4_plane_2000: [3480, 2030, 2000, ''],
+      spier_aerobox_sprinter_35t: [4350, 2060, 2100, '940'],
+      atego_818_spier_athlet_plus: [6050, 2496, 2396, ''],
+      atego_1224_spier_athlet: [7200, 2496, 2369, ''],
+      man_tgm_18290_spier_thermo: [7650, 2490, 2400, ''],
+      krone_profi_liner_2600: [13620, 2480, 2600, '33060'],
+      krone_profi_liner_2700: [13620, 2480, 2700, '33060'],
+      krone_mega_liner_3000: [13620, 2480, 3000, '32100'],
+      krone_wp73_ls5_cs: [7280, 2480, 2390, ''],
+      krone_wk73_stg: [7300, 2470, 2525, '']
+    }
+    let masseOk = 0, nutzlastLeer = 0
+    for (const [id, [l, b, h, n]] of Object.entries(erwartet)) {
+      await page.selectOption('#fzg', id); await warte(120)
+      await masseOeffnen()
+      const ist = await page.evaluate(() => [
+        document.getElementById('fL').value, document.getElementById('fB').value,
+        document.getElementById('fH').value, document.getElementById('fN').value])
+      if (ist[0] === String(l) && ist[1] === String(b) && ist[2] === String(h) && ist[3] === n) masseOk++
+      else console.log(`      ${id}: erwartet ${l}/${b}/${h}/${n || '—'}, ist ${ist.join('/')}`)
+      if (n === '' && ist[3] === '') nutzlastLeer++
+    }
+    pruefe('alle 14 Vorlagen übernehmen ihre Maße', masseOk === 14, `${masseOk} von 14`)
+    pruefe('nicht belegte Nutzlast bleibt leer', nutzlastLeer === 10, `${nutzlastLeer} von 10`)
+
+    /* Fahrzeugkarte: Status, Radkästen, Quelle */
+    await page.selectOption('#fzg', 'sprinter_schutz_m6_plane_2000'); await warte(250)
+    pruefe('M6 als konkrete Vorlage gekennzeichnet', (await page.locator('#fzgStatus').textContent()).includes('Konkrete Vorlage'))
+    pruefe('M6 ohne Radkastenwarnung', !/Radkästen vorhanden/.test(await page.locator('#fzgWarnung').textContent()))
+    pruefe('M6 ohne Richtwert-Etikett', !/RICHTWERT/i.test(await page.locator('#fzgWarnung').textContent()))
+    pruefe('M6 nennt den ebenen Boden', /keine Radkästen/.test(await page.locator('#fzgMerkmale').textContent()))
+    pruefe('M6 Nutzlast nicht vorbelegt', /nicht vorbelegt/.test(await page.locator('#fzgNutzlast').textContent()))
+    await page.locator('#fzgQuelleBox summary').click(); await warte(200)
+    const q = await page.locator('#fzgQuelle').textContent()
+    pruefe('Quelle nennt Hersteller und Konfiguration', /Schutz/.test(q) && /Mittelhochpritsche/.test(q))
+    pruefe('keine langen URLs in der Oberfläche', !/https?:\/\//.test(await page.locator('#fahrzeugKarte').textContent()))
+
+    for (const id of ['sprinter_schutz_ta6_plane_2000', 'sprinter_schutz_ta4_plane_2000']) {
+      await page.selectOption('#fzg', id); await warte(250)
+      const w = await page.locator('#fzgWarnung').textContent()
+      pruefe(`${id.includes('ta6') ? 'TA6' : 'TA4'}: Radkastenwarnung`, /Radkästen vorhanden/.test(w))
+      pruefe(`${id.includes('ta6') ? 'TA6' : 'TA4'}: Hinweis auf die Rechengrenze`, /berücksichtigt die Radkästen derzeit nicht/.test(w))
+      pruefe(`${id.includes('ta6') ? 'TA6' : 'TA4'}: als Richtwert gekennzeichnet`, (await page.locator('#fzgStatus').textContent()).includes('Richtwert'))
+    }
+
+    await page.selectOption('#fzg', 'spier_aerobox_sprinter_35t'); await warte(250)
+    pruefe('belegte Nutzlast wird übernommen', /940/.test(await page.locator('#fzgNutzlast').textContent()))
+    pruefe('Nutzlast trägt ihren Gültigkeitshinweis', /dokumentierte/.test(await page.locator('#fzgNutzlast').textContent()))
+    pruefe('keine Palettenangabe in der Karte', !/Palette/i.test(await page.locator('#fzgKarte').textContent()))
+
+    /* Freie Maße und eigene Werte */
+    await page.selectOption('#fzg', 'frei'); await warte(250)
+    pruefe('Freie Maße öffnet die Felder', await page.locator('#masseBox').isVisible())
+    await fahrzeugMasse(9999, 2100, 2500, 7000)
+    pruefe('eigene Maße werden übernommen', (await page.locator('#fzgMasse').textContent()).includes('9.999'))
+    pruefe('eigene Nutzlast wird übernommen', /7\.000/.test(await page.locator('#fzgNutzlast').textContent()))
+    pruefe('Auswahl bleibt auf freien Maßen', await page.locator('#fzg').inputValue() === 'frei')
+
+    /* Maße einer Vorlage ändern: Vorlage bleibt erhalten, Abweichung wird benannt */
+    await page.selectOption('#fzg', 'krone_mega_liner_3000'); await warte(200)
+    await masseOeffnen()
+    await page.fill('#fH', '2900'); await page.locator('#fH').blur(); await warte(250)
+    pruefe('geänderte Maße wirken', (await page.locator('#fzgMasse').textContent()).includes('2.900'))
+    pruefe('Auswahl springt auf freie Maße', await page.locator('#fzg').inputValue() === 'frei')
+    pruefe('Karte zeigt dann keine Herstellerquelle mehr', await page.locator('#fzgQuelleBox').isHidden())
+    pruefe('Status wechselt auf eigene Maße', (await page.locator('#fzgStatus').textContent()).includes('Eigene Maße'))
+
+    /* Vorlage wirkt auf die Rechnung */
+    await page.selectOption('#fzg', 'sprinter_schutz_ta4_plane_2000'); await warte(200)
+    await manuell('Palette', 1200, 800, 1000, 300, 6, 1)
+    await page.click('#btnRechnen'); await warte(400)
+    pruefe('Vorlage wirkt im Ladeplan', /3,48 m Ladelänge|3,48/.test(await page.locator('#plaene').textContent()),
+      (await page.locator('#plaene').textContent()).slice(0, 120))
 
     /* ---------- L · Druckansicht ---------- */
     console.log('\nL · Druckansicht')

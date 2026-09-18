@@ -46,15 +46,41 @@
         <span class="schritt">1</span>
         <h2>Fahrzeug</h2>
       </div>
-      <label class="lbl" for="fzg">Vorlage</label>
+      <label class="lbl" for="fzg">Fahrzeugbibliothek</label>
       <select id="fzg"></select>
-      <div class="masse">
+
+      <div class="fzg-karte" id="fzgKarte">
+        <!-- Platzhalter für die später geplante einheitliche Silhouette; bleibt bis dahin aus -->
+        <div class="fzg-bild" id="fzgBild" hidden aria-hidden="true"></div>
+        <div class="fzg-text">
+          <div class="fzg-kopf">
+            <h3 id="fzgName"></h3>
+            <span class="badge" id="fzgStatus"></span>
+          </div>
+          <p class="fzg-kat" id="fzgKat"></p>
+          <dl class="fzg-daten">
+            <div><dt>Innenmaße</dt><dd id="fzgMasse"></dd></div>
+            <div><dt>Nutzlast</dt><dd id="fzgNutzlast"></dd></div>
+          </dl>
+          <ul class="fzg-merkmale" id="fzgMerkmale"></ul>
+          <div id="fzgWarnung"></div>
+          <div class="fzg-akt noprint">
+            <button class="btn-sec" id="btnMasse">Maße bearbeiten</button>
+            <details class="quelle" id="fzgQuelleBox">
+              <summary>Technische Vorlage · Quelle</summary>
+              <div class="quelle-inhalt" id="fzgQuelle"></div>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      <div class="masse" id="masseBox">
         <div><label class="lbl" for="fL">Innenlänge mm</label><input type="number" id="fL" min="0" inputmode="numeric"></div>
         <div><label class="lbl" for="fB">Innenbreite mm</label><input type="number" id="fB" min="0" inputmode="numeric"></div>
         <div><label class="lbl" for="fH">Innenhöhe mm</label><input type="number" id="fH" min="0" inputmode="numeric"></div>
-        <div><label class="lbl" for="fN">Nutzlast kg <span class="opt">optional</span></label><input type="number" id="fN" min="0" inputmode="numeric" placeholder="z. B. 24000"></div>
+        <div><label class="lbl" for="fN">Nutzlast kg <span class="opt">optional</span></label><input type="number" id="fN" min="0" inputmode="numeric" placeholder="nicht vorbelegt"></div>
       </div>
-      <p class="fuss">Richtwerte — Innenmaße des tatsächlich eingesetzten Fahrzeugs prüfen. <span id="fLDMText"></span></p>
+      <p class="fuss">Startwerte — Maße jederzeit überschreibbar. Innenmaße des tatsächlich eingesetzten Fahrzeugs prüfen. <span id="fLDMText"></span></p>
     </section>
 
     <section class="card" id="erfassenKarte">
